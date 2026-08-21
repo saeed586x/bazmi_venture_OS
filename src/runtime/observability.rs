@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 /// Observability - monitoring, logging, and auditing for the kernel
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
 pub struct Observability {
     /// Metrics collection
     metrics: Arc<Mutex<MetricsStore>>,
@@ -41,8 +41,13 @@ pub enum LogFormat {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum LogDestination {
     Stdout,
-    File { path: String },
-    Remote { url: String, api_key: Option<String> },
+    File {
+        path: String,
+    },
+    Remote {
+        url: String,
+        api_key: Option<String>,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -98,7 +103,7 @@ pub struct AuditEvent {
     pub severity: EventSeverity,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum EventType {
     PlanCreated,
     PlanExecuted,
@@ -143,37 +148,41 @@ impl Observability {
             })),
         }
     }
-    
+
     /// Increment a counter metric
     pub fn increment_counter(&self, name: &str, value: u64) {
         let mut metrics = self.metrics.lock().unwrap();
         let counter = metrics.counters.entry(name.to_string()).or_insert(0);
         *counter += value;
     }
-    
+
     /// Set a gauge metric
     pub fn set_gauge(&self, name: &str, value: f64) {
         let mut metrics = self.metrics.lock().unwrap();
         metrics.gauges.insert(name.to_string(), value);
     }
-    
+
     /// Record a histogram observation
     pub fn observe_histogram(&self, name: &str, value: f64, buckets: &[f64]) {
         let mut metrics = self.metrics.lock().unwrap();
-        let histogram = metrics.histograms.entry(name.to_string()).or_insert_with(|| {
-            Histogram {
-                buckets: buckets.iter().map(|&upper_bound| HistogramBucket {
-                    upper_bound,
-                    count: 0,
-                }).collect(),
+        let histogram = metrics
+            .histograms
+            .entry(name.to_string())
+            .or_insert_with(|| Histogram {
+                buckets: buckets
+                    .iter()
+                    .map(|&upper_bound| HistogramBucket {
+                        upper_bound,
+                        count: 0,
+                    })
+                    .collect(),
                 sum: 0.0,
                 count: 0,
-            }
-        });
-        
+            });
+
         histogram.sum += value;
         histogram.count += 1;
-        
+
         // Find appropriate bucket and increment
         for bucket in &mut histogram.buckets {
             if value <= bucket.upper_bound {
@@ -182,24 +191,28 @@ impl Observability {
             }
         }
     }
-    
+
     /// Record a summary observation
     pub fn observe_summary(&self, name: &str, value: f64, quantiles: &[f64]) {
         let mut metrics = self.metrics.lock().unwrap();
-        let summary = metrics.summaries.entry(name.to_string()).or_insert_with(|| {
-            Summary {
-                quantiles: quantiles.iter().map(|&q| Quantile {
-                    quantile: q,
-                    value: 0.0,
-                }).collect(),
+        let summary = metrics
+            .summaries
+            .entry(name.to_string())
+            .or_insert_with(|| Summary {
+                quantiles: quantiles
+                    .iter()
+                    .map(|&q| Quantile {
+                        quantile: q,
+                        value: 0.0,
+                    })
+                    .collect(),
                 sum: 0.0,
                 count: 0,
-            }
-        });
-        
+            });
+
         summary.sum += value;
         summary.count += 1;
-        
+
         // Update quantile values (simplified)
         for quantile in &mut summary.quantiles {
             // In a real implementation, this would maintain proper quantiles
@@ -208,7 +221,7 @@ impl Observability {
             }
         }
     }
-    
+
     /// Log a message
     pub fn log(&self, level: LogLevel, message: &str, details: Option<serde_json::Value>) {
         // Check if log level is enabled
@@ -219,11 +232,11 @@ impl Observability {
                 message: message.to_string(),
                 details,
             };
-            
+
             self.write_log_entry(&log_entry);
         }
     }
-    
+
     /// Check if a log level is enabled
     fn is_log_level_enabled(&self, level: &LogLevel) -> bool {
         match (&self.log_config.log_level, level) {
@@ -238,16 +251,24 @@ impl Observability {
             (LogLevel::Error, _) => false,
         }
     }
-    
+
     /// Write a log entry to configured destinations
     fn write_log_entry(&self, entry: &LogEntry) {
         // Format the log entry
         let formatted = match self.log_config.log_format {
-            LogFormat::Json => serde_json::to_string(entry).unwrap_or_else(|_| format!("{:?}", entry)),
-            LogFormat::Text => format!("[{}] {:?} - {}", entry.timestamp, entry.level, entry.message),
-            LogFormat::Structured => format!("{:?}|{}|{}|{:?}", entry.timestamp, entry.level, entry.message, entry.details),
+            LogFormat::Json => {
+                serde_json::to_string(entry).unwrap_or_else(|_| format!("{:?}", entry))
+            }
+            LogFormat::Text => format!(
+                "[{}] {:?} - {}",
+                entry.timestamp, entry.level, entry.message
+            ),
+            LogFormat::Structured => format!(
+                "{:?}|{:?}|{}|{:?}",
+                entry.timestamp, entry.level, entry.message, entry.details
+            ),
         };
-        
+
         // Write to destinations
         for destination in &self.log_config.destinations {
             match destination {
@@ -267,8 +288,9 @@ impl Observability {
             }
         }
     }
-    
+
     /// Record an audit event
+    #[allow(clippy::too_many_arguments)]
     pub fn record_audit_event(
         &self,
         event_type: EventType,
@@ -290,52 +312,65 @@ impl Observability {
             outcome,
             severity,
         };
-        
+
         let mut audit_trail = self.audit_trail.lock().unwrap();
         audit_trail.events.push(event);
-        
+
         // Clean up old events based on retention policy
         self.cleanup_old_events(&mut audit_trail);
     }
-    
+
     /// Clean up old audit events based on retention policy
     fn cleanup_old_events(&self, audit_trail: &mut AuditTrail) {
-        let cutoff_date = chrono::Utc::now() - chrono::Duration::days(audit_trail.retention_days as i64);
-        audit_trail.events.retain(|event| event.timestamp > cutoff_date);
+        let cutoff_date =
+            chrono::Utc::now() - chrono::Duration::days(audit_trail.retention_days as i64);
+        audit_trail
+            .events
+            .retain(|event| event.timestamp > cutoff_date);
     }
-    
+
     /// Get current metrics
     pub fn get_metrics(&self) -> MetricsStore {
         self.metrics.lock().unwrap().clone()
     }
-    
+
     /// Get audit trail
     pub fn get_audit_trail(&self) -> AuditTrail {
         self.audit_trail.lock().unwrap().clone()
     }
-    
+
     /// Get audit events by type
     pub fn get_events_by_type(&self, event_type: &EventType) -> Vec<AuditEvent> {
         let audit_trail = self.audit_trail.lock().unwrap();
-        audit_trail.events.iter()
+        audit_trail
+            .events
+            .iter()
             .filter(|event| matches!(&event.event_type, et if et == event_type))
             .cloned()
             .collect()
     }
-    
+
     /// Get audit events by actor
     pub fn get_events_by_actor(&self, actor: &str) -> Vec<AuditEvent> {
         let audit_trail = self.audit_trail.lock().unwrap();
-        audit_trail.events.iter()
+        audit_trail
+            .events
+            .iter()
             .filter(|event| event.actor == actor)
             .cloned()
             .collect()
     }
-    
+
     /// Get audit events by time range
-    pub fn get_events_by_time_range(&self, start: &chrono::DateTime<chrono::Utc>, end: &chrono::DateTime<chrono::Utc>) -> Vec<AuditEvent> {
+    pub fn get_events_by_time_range(
+        &self,
+        start: &chrono::DateTime<chrono::Utc>,
+        end: &chrono::DateTime<chrono::Utc>,
+    ) -> Vec<AuditEvent> {
         let audit_trail = self.audit_trail.lock().unwrap();
-        audit_trail.events.iter()
+        audit_trail
+            .events
+            .iter()
             .filter(|event| &event.timestamp >= start && &event.timestamp <= end)
             .cloned()
             .collect()
@@ -366,22 +401,22 @@ impl Observability {
     pub fn trace(&self, message: &str, details: Option<serde_json::Value>) {
         self.log(LogLevel::Trace, message, details);
     }
-    
+
     /// Log a debug message
     pub fn debug(&self, message: &str, details: Option<serde_json::Value>) {
         self.log(LogLevel::Debug, message, details);
     }
-    
+
     /// Log an info message
     pub fn info(&self, message: &str, details: Option<serde_json::Value>) {
         self.log(LogLevel::Info, message, details);
     }
-    
+
     /// Log a warning message
     pub fn warn(&self, message: &str, details: Option<serde_json::Value>) {
         self.log(LogLevel::Warn, message, details);
     }
-    
+
     /// Log an error message
     pub fn error(&self, message: &str, details: Option<serde_json::Value>) {
         self.log(LogLevel::Error, message, details);

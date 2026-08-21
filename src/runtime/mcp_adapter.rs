@@ -73,17 +73,17 @@ impl MCPAdapter {
             config,
         }
     }
-    
+
     /// Register a tool
     pub fn register_tool(&mut self, tool: ToolDefinition) {
         self.tools.insert(tool.name.clone(), tool);
     }
-    
+
     /// Get available tools
     pub fn list_tools(&self) -> Vec<&ToolDefinition> {
         self.tools.values().filter(|tool| tool.enabled).collect()
     }
-    
+
     /// Execute a tool call
     pub async fn execute_tool(&self, tool_call: ToolCall) -> Result<ToolResponse, MCPError> {
         // Check if tool exists and is enabled
@@ -92,21 +92,21 @@ impl MCPAdapter {
             Some(_) => return Err(MCPError::ToolDisabled(tool_call.tool_name)),
             None => return Err(MCPError::ToolNotFound(tool_call.tool_name)),
         };
-        
+
         // Validate required parameters
         for param in &tool.parameters {
             if param.required && !tool_call.arguments.contains_key(&param.name) {
                 return Err(MCPError::MissingParameter(param.name.clone()));
             }
         }
-        
+
         // In a real implementation, this would call the MCP endpoint
         // For now, we'll simulate tool execution
-        
+
         let start_time = std::time::Instant::now();
         let result = self.simulate_tool_execution(&tool_call, tool).await;
         let execution_time = start_time.elapsed().as_millis() as u64;
-        
+
         Ok(ToolResponse {
             execution_id: tool_call.execution_id,
             success: result.is_ok(),
@@ -115,9 +115,13 @@ impl MCPAdapter {
             execution_time_ms: execution_time,
         })
     }
-    
+
     /// Simulate tool execution (in a real implementation, this would call MCP)
-    async fn simulate_tool_execution(&self, tool_call: &ToolCall, tool: &ToolDefinition) -> Result<serde_json::Value, MCPError> {
+    async fn simulate_tool_execution(
+        &self,
+        tool_call: &ToolCall,
+        _tool: &ToolDefinition,
+    ) -> Result<serde_json::Value, MCPError> {
         // Simulate different tools based on name
         match tool_call.tool_name.as_str() {
             "code_analyzer" => {
@@ -168,12 +172,12 @@ impl MCPAdapter {
             }
         }
     }
-    
+
     /// Get tool by name
     pub fn get_tool(&self, name: &str) -> Option<&ToolDefinition> {
         self.tools.get(name)
     }
-    
+
     /// Get configuration
     pub fn config(&self) -> &MCPConfig {
         &self.config
@@ -229,13 +233,13 @@ impl MCPAdapter {
                     description: "Quality ruleset to apply".to_string(),
                     required: false,
                     default_value: Some(serde_json::Value::String("default".to_string())),
-                }
+                },
             ],
             return_type: "object".to_string(),
             category: ToolCategory::Development,
             enabled: true,
         });
-        
+
         // Test runner tool
         self.register_tool(ToolDefinition {
             name: "test_runner".to_string(),
@@ -254,13 +258,13 @@ impl MCPAdapter {
                     description: "Whether to run tests in parallel".to_string(),
                     required: false,
                     default_value: Some(serde_json::Value::Bool(true)),
-                }
+                },
             ],
             return_type: "object".to_string(),
             category: ToolCategory::Testing,
             enabled: true,
         });
-        
+
         // Deploy tool
         self.register_tool(ToolDefinition {
             name: "deploy_tool".to_string(),
@@ -279,13 +283,13 @@ impl MCPAdapter {
                     description: "Version to deploy".to_string(),
                     required: true,
                     default_value: None,
-                }
+                },
             ],
             return_type: "object".to_string(),
             category: ToolCategory::Deployment,
             enabled: true,
         });
-        
+
         // Security scanner tool
         self.register_tool(ToolDefinition {
             name: "security_scanner".to_string(),
@@ -304,7 +308,7 @@ impl MCPAdapter {
                     description: "Scan depth (quick, thorough)".to_string(),
                     required: false,
                     default_value: Some(serde_json::Value::String("thorough".to_string())),
-                }
+                },
             ],
             return_type: "object".to_string(),
             category: ToolCategory::Security,
