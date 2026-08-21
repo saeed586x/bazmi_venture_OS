@@ -1,0 +1,6 @@
+M  .gitignore
+MM Cargo.lock
+MM Cargo.toml
+ M src/bin/restate-workers.rs
+ M src/bin/venture-cli.rs
+?? .agents/test-results/

@@ -13,3 +13,20 @@ chrono = { version = "0.4", features = ["serde"] }
 [dev-dependencies]
 futures = "0.3"
 tokio = { version = "1.0", features = ["full"] }
+
+[dependencies.anyhow]
+version = "1.0.104"
+optional = true
+
+[[bin]]
+name = "restate-workers"
+path = "src/bin/restate-workers.rs"
+required-features = ["restate"]
+
+[features]
+restate = ["dep:restate-sdk", "dep:anyhow"]
+
+[dependencies.restate-sdk]
+package = "restate-sdk"
+version = "0.1"
+optional = true
