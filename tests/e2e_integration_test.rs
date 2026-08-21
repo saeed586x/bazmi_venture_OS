@@ -134,8 +134,8 @@ fn test_complete_e2e_workflow() {
     println!("E2E workflow completed successfully!");
 }
 
-#[test]
-fn test_llm_adapter_basic_functionality() {
+#[tokio::test]
+async fn test_llm_adapter_basic_functionality() {
     use venture_os_kernel::runtime::llm_adapter::{LLMAdapter, LLMConfig, LLMProvider};
 
     let config = LLMConfig {
@@ -146,7 +146,7 @@ fn test_llm_adapter_basic_functionality() {
     };
 
     let llm_adapter = LLMAdapter::new(config);
-    let response = futures::executor::block_on(llm_adapter.generate_text("Hello world"));
+    let response = llm_adapter.generate_text("Hello world").await;
 
     assert!(response.is_ok());
     let text = response.unwrap();
