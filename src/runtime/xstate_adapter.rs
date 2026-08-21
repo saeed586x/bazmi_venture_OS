@@ -31,24 +31,152 @@ impl XStateAdapter {
 
     /// Convert an execution plan to XState format
     pub fn to_xstate(&self, plan: &ExecutionPlanV1) -> Result<XStateMachine, XStateError> {
-        // In a real implementation, this would convert the execution plan
-        // to an XState-compatible state machine representation
+        // Build states from tasks
+        let mut states = Vec::new();
+        let mut transitions = Vec::new();
+
+        // Add initial state
+        states.push(XState {
+            id: "start".to_string(),
+            name: "Start".to_string(),
+            type_: StateType::Atomic,
+        });
+
+        // Add task states
+        for task in &plan.tasks {
+            states.push(XState {
+                id: task.id.clone(),
+                name: task.name.clone(),
+                type_: StateType::Atomic,
+            });
+        }
+
+        // Add gate states
+        for gate in &plan.gates {
+            states.push(XState {
+                id: format!("gate_{}", gate.id),
+                name: gate.name.clone(),
+                type_: StateType::Atomic,
+            });
+        }
+
+        // Add final/completion states
+        for condition in &plan.completion_conditions {
+            states.push(XState {
+                id: format!("completion_{}", condition.id),
+                name: format!("Check: {}", condition.description),
+                type_: StateType::Final,
+            });
+        }
+
+        // Build transitions from dependencies
+        for dep in &plan.dependencies {
+            transitions.push(XTransition {
+                from: dep.dependency_task_id.clone(),
+                to: dep.dependent_task_id.clone(),
+                event: "completed".to_string(),
+                guard: None,
+            });
+        }
+
+        // Add transition from start to first task
+        if let Some(first_task) = plan.tasks.first() {
+            transitions.push(XTransition {
+                from: "start".to_string(),
+                to: first_task.id.clone(),
+                event: "init".to_string(),
+                guard: None,
+            });
+        }
+
+        // Add transitions to completion states
+        if let Some(last_task) = plan.tasks.last() {
+            for condition in &plan.completion_conditions {
+                transitions.push(XTransition {
+                    from: last_task.id.clone(),
+                    to: format!("completion_{}", condition.id),
+                    event: "task_completed".to_string(),
+                    guard: Some(format!("evaluate({})", condition.expression)),
+                });
+            }
+        }
 
         Ok(XStateMachine {
             id: format!("plan_{}", plan.id),
             initial: "start".to_string(),
-            states: vec![],
-            transitions: vec![],
+            states,
+            transitions,
         })
     }
 
     /// Export XState machine to specified format
     pub fn export(&self, machine: &XStateMachine) -> Result<String, XStateError> {
         match self.config.export_format {
-            ExportFormat::Json => Ok(serde_json::to_string(machine)?),
-            ExportFormat::Scxml => Ok("SCXML export not implemented".to_string()),
-            ExportFormat::Mermaid => Ok("Mermaid export not implemented".to_string()),
+            ExportFormat::Json => Ok(serde_json::to_string_pretty(machine)?),
+            ExportFormat::Scxml => self.export_scxml(machine),
+            ExportFormat::Mermaid => self.export_mermaid(machine),
         }
+    }
+
+    /// Export to SCXML format
+    fn export_scxml(&self, machine: &XStateMachine) -> Result<String, XStateError> {
+        let mut scxml = String::from("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
+        scxml.push_str(&format!(
+            "<scxml xmlns=\"http://www.w3.org/2005/07/scxml\" version=\"1.0\" initial=\"{}\">\n",
+            machine.initial
+        ));
+
+        for state in &machine.states {
+            scxml.push_str(&format!(
+                "  <state id=\"{}\" name=\"{}\">\n",
+                state.id, state.name
+            ));
+            scxml.push_str("  </state>\n");
+        }
+
+        for transition in &machine.transitions {
+            scxml.push_str(&format!(
+                "  <transition from=\"{}\" to=\"{}\" event=\"{}\"",
+                transition.from, transition.to, transition.event
+            ));
+            if let Some(guard) = &transition.guard {
+                scxml.push_str(&format!(" cond=\"{}\"", guard));
+            }
+            scxml.push_str(
+                "/>
+",
+            );
+        }
+
+        scxml.push_str("</scxml>");
+        Ok(scxml)
+    }
+
+    /// Export to Mermaid state diagram format
+    fn export_mermaid(&self, machine: &XStateMachine) -> Result<String, XStateError> {
+        let mut mermaid = String::from("stateDiagram-v2\n");
+        mermaid.push_str(&format!("    [*] --> {}\n", machine.initial));
+
+        for transition in &machine.transitions {
+            let label = if let Some(guard) = &transition.guard {
+                format!("{} [{}] ", transition.event, guard)
+            } else {
+                transition.event.clone()
+            };
+            mermaid.push_str(&format!(
+                "    {} --> {}: {}\n",
+                transition.from, transition.to, label
+            ));
+        }
+
+        // Mark final states
+        for state in &machine.states {
+            if matches!(state.type_, StateType::Final) {
+                mermaid.push_str(&format!("    {} --> [*]\n", state.id));
+            }
+        }
+
+        Ok(mermaid)
     }
 }
 

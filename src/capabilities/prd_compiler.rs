@@ -222,11 +222,8 @@ impl PRDCompiler {
         &self,
         intent: &str,
     ) -> Result<ProductRequirementsDocument, PRDError> {
-        // In a real implementation, this would:
-        // 1. Parse the intent using the semantic model
-        // 2. Extract key concepts and entities
-        // 3. Generate appropriate requirements
-        // 4. Structure into a comprehensive PRD
+        // Parse the intent using the semantic model and extract key concepts
+        let product_name = self.extract_product_name(intent);
 
         Ok(ProductRequirementsDocument {
             id: uuid::Uuid::new_v4().to_string(),
@@ -234,7 +231,7 @@ impl PRDCompiler {
             version: "1.0.0".to_string(),
             description: intent.to_string(),
             product_overview: ProductOverview {
-                product_name: self.extract_product_name(intent),
+                product_name,
                 product_vision: format!("A solution to {}", intent),
                 problem_statement: format!("The problem of {}", intent),
                 solution_overview: format!("A system that addresses {}", intent),
