@@ -1,4 +1,1 @@
-```
-target/
-**/*.rs.bk
-```
+Nothing should be ignored in this case, as only a Rust source file (`examples/test_issue02.rs`) was added without any build artifacts, dependencies, or temporary files.
