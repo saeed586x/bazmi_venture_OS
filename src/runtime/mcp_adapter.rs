@@ -10,6 +10,8 @@ pub struct MCPAdapter {
     tools: HashMap<String, ToolDefinition>,
     /// MCP configuration
     config: MCPConfig,
+    #[serde(skip)]
+    http_client: reqwest::Client,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -71,6 +73,7 @@ impl MCPAdapter {
         Self {
             tools: HashMap::new(),
             config,
+            http_client: reqwest::Client::new(),
         }
     }
 
@@ -100,11 +103,9 @@ impl MCPAdapter {
             }
         }
 
-        // In a real implementation, this would call the MCP endpoint
-        // For now, we'll simulate tool execution
-
+        // Call the real MCP endpoint
         let start_time = std::time::Instant::now();
-        let result = self.simulate_tool_execution(&tool_call, tool).await;
+        let result = self.call_mcp_endpoint(&tool_call, tool).await;
         let execution_time = start_time.elapsed().as_millis() as u64;
 
         Ok(ToolResponse {
@@ -116,61 +117,41 @@ impl MCPAdapter {
         })
     }
 
-    /// Simulate tool execution (in a real implementation, this would call MCP)
-    async fn simulate_tool_execution(
+    /// Call the MCP endpoint to execute a tool
+    async fn call_mcp_endpoint(
         &self,
         tool_call: &ToolCall,
         _tool: &ToolDefinition,
     ) -> Result<serde_json::Value, MCPError> {
-        // Simulate different tools based on name
-        match tool_call.tool_name.as_str() {
-            "code_analyzer" => {
-                // Simulate code analysis
-                Ok(serde_json::json!({
-                    "issues_found": 3,
-                    "severity": "medium",
-                    "recommendations": [
-                        "Consider adding error handling",
-                        "Optimize loop performance",
-                        "Add documentation comments"
-                    ]
-                }))
-            }
-            "test_runner" => {
-                // Simulate test execution
-                Ok(serde_json::json!({
-                    "tests_passed": 42,
-                    "tests_failed": 0,
-                    "coverage_percentage": 87.5,
-                    "duration_seconds": 15.3
-                }))
-            }
-            "deploy_tool" => {
-                // Simulate deployment
-                Ok(serde_json::json!({
-                    "deployment_status": "success",
-                    "environment": "staging",
-                    "version_deployed": "1.2.3",
-                    "rollback_available": true
-                }))
-            }
-            "security_scanner" => {
-                // Simulate security scan
-                Ok(serde_json::json!({
-                    "vulnerabilities_found": 0,
-                    "scan_duration": 45.2,
-                    "compliance_score": 95.0
-                }))
-            }
-            _ => {
-                // Generic tool response
-                Ok(serde_json::json!({
-                    "status": "completed",
-                    "output": format!("Executed tool: {}", tool_call.tool_name),
-                    "timestamp": chrono::Utc::now().to_rfc3339()
-                }))
-            }
+        let mcp_url = format!(
+            "{}/tools/{}",
+            self.config.endpoint_url.trim_end_matches('/'),
+            tool_call.tool_name
+        );
+
+        let mut request = self
+            .http_client
+            .post(&mcp_url)
+            .header("Content-Type", "application/json")
+            .timeout(std::time::Duration::from_secs(self.config.timeout_seconds));
+
+        if let Some(api_key) = &self.config.api_key {
+            request = request.header("Authorization", format!("Bearer {}", api_key));
         }
+
+        let response = request.json(&tool_call.arguments).send().await?;
+
+        if !response.status().is_success() {
+            let status = response.status();
+            let error_text = response.text().await.unwrap_or_default();
+            return Err(MCPError::ExecutionFailed(format!(
+                "MCP API request failed with status {}: {}",
+                status, error_text
+            )));
+        }
+
+        let response_json: serde_json::Value = response.json().await?;
+        Ok(response_json)
     }
 
     /// Get tool by name
@@ -193,7 +174,7 @@ pub enum MCPError {
     #[error("Missing required parameter: {0}")]
     MissingParameter(String),
     #[error("Network error: {0}")]
-    NetworkError(String),
+    NetworkError(#[from] reqwest::Error),
     #[error("Authentication error: {0}")]
     AuthError(String),
     #[error("Tool execution failed: {0}")]

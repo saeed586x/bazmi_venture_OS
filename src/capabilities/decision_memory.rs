@@ -313,7 +313,8 @@ impl DecisionMemory {
             if pattern.typical_outcomes.len() == 1 {
                 pattern.confidence = 0.9; // High confidence if consistent
             } else {
-                pattern.confidence = 1.0 / pattern.typical_outcomes.len() as f64; // Lower confidence if varied outcomes
+                pattern.confidence = 1.0 / pattern.typical_outcomes.len() as f64;
+                // Lower confidence if varied outcomes
             }
         }
     }

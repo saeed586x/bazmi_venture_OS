@@ -8,6 +8,8 @@ use serde::{Deserialize, Serialize};
 pub struct RestateAdapter {
     /// Configuration for the Restate adapter
     config: RestateConfig,
+    #[serde(skip)]
+    http_client: reqwest::Client,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -20,7 +22,10 @@ pub struct RestateConfig {
 impl RestateAdapter {
     /// Create a new Restate adapter
     pub fn new(config: RestateConfig) -> Self {
-        Self { config }
+        Self {
+            config,
+            http_client: reqwest::Client::new(),
+        }
     }
 
     /// Submit an execution plan to Restate for durable execution
@@ -28,27 +33,128 @@ impl RestateAdapter {
         &self,
         plan: &ExecutionPlanV1,
     ) -> Result<ExecutionResult, RestateError> {
-        // In a real implementation, this would:
-        // 1. Convert the execution plan to Restate-compatible format
-        // 2. Submit it to the Restate service
-        // 3. Return the execution result
+        let submit_url = format!("{}/invoke", self.config.endpoint_url.trim_end_matches('/'));
+
+        // Convert execution plan to Restate-compatible workflow invocation
+        let workflow_request = serde_json::json!({
+            "workflow_id": format!("plan_{}", plan.id),
+            "input": {
+                "execution_plan": plan,
+                "metadata": {
+                    "created_at": chrono::Utc::now().to_rfc3339(),
+                    "version": "v1"
+                }
+            }
+        });
+
+        let mut request = self
+            .http_client
+            .post(&submit_url)
+            .header("Content-Type", "application/json")
+            .timeout(std::time::Duration::from_secs(self.config.timeout_seconds));
+
+        if let Some(api_key) = &self.config.api_key {
+            request = request.header("Authorization", format!("Bearer {}", api_key));
+        }
+
+        let response = request
+            .json(&workflow_request)
+            .send()
+            .await
+            .map_err(|e| RestateError::NetworkError(format!("HTTP request failed: {}", e)))?;
+
+        if !response.status().is_success() {
+            let status = response.status();
+            let error_text = response.text().await.unwrap_or_default();
+            return Err(RestateError::ExecutionFailed(format!(
+                "Restate API request failed with status {}: {}",
+                status, error_text
+            )));
+        }
+
+        let response_json: serde_json::Value = response
+            .json()
+            .await
+            .map_err(|e| RestateError::NetworkError(format!("JSON parse failed: {}", e)))?;
+
+        // Parse Restate response to get execution ID and status
+        let execution_id = response_json
+            .pointer("/execution_id")
+            .and_then(|v| v.as_str())
+            .unwrap_or(&format!("exec_{}", plan.id))
+            .to_string();
+
+        let status = response_json
+            .pointer("/status")
+            .and_then(|v| v.as_str())
+            .map(|s| match s {
+                "running" => ExecutionStatus::Running,
+                "completed" => ExecutionStatus::Completed,
+                "failed" => ExecutionStatus::Failed,
+                "cancelled" => ExecutionStatus::Cancelled,
+                _ => ExecutionStatus::Submitted,
+            })
+            .unwrap_or(ExecutionStatus::Submitted);
 
         Ok(ExecutionResult {
-            execution_id: format!("exec_{}", plan.id),
-            status: ExecutionStatus::Submitted,
-            result_data: None,
+            execution_id,
+            status,
+            result_data: Some(response_json),
         })
     }
 
     /// Check the status of an execution
     pub async fn get_execution_status(
         &self,
-        _execution_id: &str,
+        execution_id: &str,
     ) -> Result<ExecutionStatus, RestateError> {
-        // In a real implementation, this would query the Restate service
-        // for the execution status
+        let status_url = format!(
+            "{}/status/{}",
+            self.config.endpoint_url.trim_end_matches('/'),
+            execution_id
+        );
 
-        Ok(ExecutionStatus::Running)
+        let mut request = self
+            .http_client
+            .get(&status_url)
+            .timeout(std::time::Duration::from_secs(self.config.timeout_seconds));
+
+        if let Some(api_key) = &self.config.api_key {
+            request = request.header("Authorization", format!("Bearer {}", api_key));
+        }
+
+        let response = request
+            .send()
+            .await
+            .map_err(|e| RestateError::NetworkError(format!("HTTP request failed: {}", e)))?;
+
+        if !response.status().is_success() {
+            let status = response.status();
+            let error_text = response.text().await.unwrap_or_default();
+            return Err(RestateError::ExecutionFailed(format!(
+                "Restate status request failed with status {}: {}",
+                status, error_text
+            )));
+        }
+
+        let response_json: serde_json::Value = response
+            .json()
+            .await
+            .map_err(|e| RestateError::NetworkError(format!("JSON parse failed: {}", e)))?;
+
+        let status = response_json
+            .pointer("/status")
+            .and_then(|v| v.as_str())
+            .map(|s| match s {
+                "running" => ExecutionStatus::Running,
+                "completed" => ExecutionStatus::Completed,
+                "failed" => ExecutionStatus::Failed,
+                "cancelled" => ExecutionStatus::Cancelled,
+                _ => ExecutionStatus::Submitted,
+            })
+            .unwrap_or(ExecutionStatus::Running);
+
+        Ok(status)
     }
 }
 
