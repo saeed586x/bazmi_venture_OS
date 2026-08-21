@@ -1,0 +1,1320 @@
+{
+  "ventore_os_kernel": {
+    "metadata": {
+      "name": "Venture OS Kernel",
+      "version": "3.0.0",
+      "status": "FINAL_SPECIFICATION",
+      "implementation_language": "Rust",
+      "architecture_style": "Modular Monolith with Capability Registry",
+      "canonical_source_of_truth": "GitHub",
+      "last_updated": "2026-08-21",
+      "design_principles": [
+        "Contract-First Architecture",
+        "Language-Agnostic External APIs",
+        "Canonical Semantic Model is Authoritative",
+        "Deterministic Control over LLM Reasoning",
+        "No Unnecessary Microservices",
+        "Extensibility via Capability Registry",
+        "Provenance for All Decisions",
+        "Event-Driven State Transitions",
+        "Durable Execution Boundary Separation"
+      ]
+    },
+    "architecture": {
+      "layers": [
+        {
+          "id": "L1_CORE_KERNEL",
+          "name": "Core Kernel",
+          "responsibility": "Foundational domain model, contracts, governance, state, and extension infrastructure",
+          "components": [
+            "Canonical Semantic Model",
+            "Domain Contracts",
+            "Event Model",
+            "State Model",
+            "Governance Kernel",
+            "Capability Registry",
+            "Extension API",
+            "Provenance/Evidence System"
+          ]
+        },
+        {
+          "id": "L2_INTENT_MODELING",
+          "name": "Intent & Modeling Layer",
+          "responsibility": "Transform raw ideas into structured canonical domain representations",
+          "components": [
+            "Intent Engine",
+            "Domain Modeling",
+            "Requirements Modeling",
+            "Context & Environment Engine"
+          ]
+        },
+        {
+          "id": "L3_SYNTHESIS_SPECIFICATION",
+          "name": "Synthesis & Specification Layer",
+          "responsibility": "Compile canonical model into deliverable specifications",
+          "components": [
+            "Product Compiler (PRD)",
+            "Architecture Compiler (ARD)",
+            "Specification Compiler (API, Data Model, Workflows, Contracts)"
+          ]
+        },
+        {
+          "id": "L4_VERIFICATION_GOVERNANCE",
+          "name": "Verification & Governance",
+          "responsibility": "Validate, simulate, assess risk, and authorize progression through gates",
+          "components": [
+            "Validation Engine",
+            "Simulation & Verification Engine",
+            "Risk Engine",
+            "Decision Gateway"
+          ]
+        },
+        {
+          "id": "L5_MEMORY_KNOWLEDGE",
+          "name": "Memory & Knowledge",
+          "responsibility": "Track decisions, evidence, outcomes, and enable retrieval",
+          "components": [
+            "Decision Memory",
+            "Evidence/Provenance Repository",
+            "Outcome Tracking",
+            "Lesson Repository",
+            "Knowledge Retrieval (Semantic/Graph/Vector)"
+          ]
+        },
+        {
+          "id": "L6_PLANNING",
+          "name": "Planning Layer",
+          "responsibility": "Transform validated specifications into executable plans with dynamic replanning",
+          "components": [
+            "Execution Planning Engine",
+            "Dynamic Planner (Event-Triggered Replanning)",
+            "Plan Versioning"
+          ]
+        },
+        {
+          "id": "L7_RUNTIME",
+          "name": "Runtime Layer",
+          "responsibility": "Execute plans with durable state machines and external integrations",
+          "components": [
+            "XState State Machine Boundary",
+            "Restate Durable Execution Boundary",
+            "Task Orchestration",
+            "Multi-Agent Coordination",
+            "Human-in-the-Loop",
+            "External Integrations"
+          ]
+        },
+        {
+          "id": "L8_INTEGRATION_ADAPTERS",
+          "name": "Integration & Adapters",
+          "responsibility": "Provider-neutral interfaces to external systems",
+          "components": [
+            "LLM Adapter (OpenAI, Anthropic, Gemini, DeepSeek, etc.)",
+            "Agent Adapter",
+            "Tool Adapter",
+            "Git Adapter",
+            "Database Adapter",
+            "Deployment Adapter",
+            "MCP (Model Context Protocol)",
+            "External APIs"
+          ]
+        },
+        {
+          "id": "L9_OBSERVABILITY",
+          "name": "Observability & Audit",
+          "responsibility": "Trace, audit, measure, and analyze system behavior",
+          "components": [
+            "Execution Tracing",
+            "Decision Audit",
+            "Event Log",
+            "Provenance Tracking",
+            "Metrics",
+            "Cost Tracking",
+            "Failure Analysis"
+          ]
+        }
+      ],
+      "data_flow": {
+        "primary_pipeline": [
+          "IDEA",
+          "INTENT ENGINE",
+          "INTENT MODEL",
+          "DOMAIN MODEL",
+          "REQUIREMENT MODEL",
+          "PRD / ARD (parallel projections)",
+          "CANONICAL MODEL",
+          "VALIDATION",
+          "RISK ANALYSIS",
+          "SIMULATION",
+          "DECISION GATE",
+          "EXECUTION PLAN",
+          "DYNAMIC PLANNER",
+          "XSTATE",
+          "RESTATE",
+          "AGENTS / TOOLS / HUMANS",
+          "OUTCOME",
+          "EVIDENCE + DECISION MEMORY",
+          "REPLAN FEEDBACK LOOP"
+        ],
+        "non_linear_support": true,
+        "parallel_execution_supported": true,
+        "replanning_supported": true
+      }
+    },
+    "primitives": {
+      "canonical_entities": [
+        {
+          "name": "Idea",
+          "description": "Raw human input or business opportunity",
+          "fields": ["id", "text", "source", "timestamp", "confidence"],
+          "lifecycle": ["Received", "Parsed", "Promoted to Intent", "Rejected"]
+        },
+        {
+          "name": "Intent",
+          "description": "Structured expression of business purpose",
+          "fields": ["id", "statement", "goals", "constraints", "stakeholders", "evidence", "version"],
+          "lifecycle": ["Draft", "Refined", "Validated", "Committed"]
+        },
+        {
+          "name": "Goal",
+          "description": "Measurable objective derived from intent",
+          "fields": ["id", "description", "success_criteria", "priority", "owner"],
+          "lifecycle": ["Proposed", "Accepted", "Achieved", "Abandoned"]
+        },
+        {
+          "name": "Constraint",
+          "description": "Hard limitation that must be respected",
+          "fields": ["id", "expression", "type", "severity", "source", "evidence", "status"],
+          "constraint_types": ["Functional", "Non-Functional", "Regulatory", "Security", "Cost", "Technical", "Business", "Operational"],
+          "severity_levels": ["Low", "Medium", "High", "Critical"],
+          "lifecycle": ["Discovered", "Validated", "Enforced", "Relaxed"]
+        },
+        {
+          "name": "Domain",
+          "description": "Bounded business context",
+          "fields": ["id", "name", "bounded_contexts", "entities", "capabilities", "relationships"],
+          "lifecycle": ["Identified", "Modeled", "Validated", "Implemented"]
+        },
+        {
+          "name": "BoundedContext",
+          "description": "DDD-style bounded context within a domain",
+          "fields": ["id", "name", "domain_id", "entities", "ubiquitous_language", "boundaries"],
+          "lifecycle": ["Proposed", "Defined", "Implemented"]
+        },
+        {
+          "name": "Entity",
+          "description": "Domain entity with identity",
+          "fields": ["id", "name", "attributes", "relationships", "invariants"],
+          "lifecycle": ["Defined", "Validated", "Implemented"]
+        },
+        {
+          "name": "Capability",
+          "description": "Atomic unit of functionality the system can provide",
+          "fields": ["id", "name", "description", "inputs", "outputs", "constraints", "dependencies"],
+          "lifecycle": ["Registered", "Implemented", "Verified", "Deprecated"]
+        },
+        {
+          "name": "Requirement",
+          "description": "Specific need that must be satisfied",
+          "fields": ["id", "description", "type", "acceptance_criteria", "priority", "status", "derived_from"],
+          "requirement_types": ["Functional", "Non-Functional", "Technical", "Business", "Security", "Performance"],
+          "status_values": ["Proposed", "Approved", "Implemented", "Verified", "Rejected"],
+          "lifecycle": ["Elicited", "Analyzed", "Specified", "Validated", "Implemented", "Verified"]
+        },
+        {
+          "name": "AcceptanceCriterion",
+          "description": "Testable condition for requirement satisfaction",
+          "fields": ["id", "requirement_id", "statement", "test_contract", "verification_method"],
+          "verification_methods": ["Automated Test", "Manual Review", "Simulation", "Audit"],
+          "lifecycle": ["Defined", "Validated", "Passed", "Failed"]
+        },
+        {
+          "name": "ProductConcept",
+          "description": "High-level product idea and value proposition",
+          "fields": ["id", "name", "value_proposition", "target_users", "key_features"],
+          "lifecycle": ["Conceptualized", "Validated", "Implemented"]
+        },
+        {
+          "name": "ArchitectureDecision",
+          "description": "Significant architectural choice with rationale",
+          "fields": ["id", "title", "context", "decision", "alternatives_considered", "rationale", "consequences", "status", "evidence"],
+          "status_values": ["Proposed", "Accepted", "Superseded", "Deprecated"],
+          "lifecycle": ["Identified", "Evaluated", "Decided", "Implemented", "Reviewed"]
+        },
+        {
+          "name": "Policy",
+          "description": "Decision rule governing system behavior",
+          "fields": ["id", "name", "condition", "action", "scope", "priority", "enforcement_mode"],
+          "enforcement_modes": ["Deterministic", "LLM-Assisted", "Human-Approval-Required"],
+          "lifecycle": ["Draft", "Active", "Suspended", "Retired"]
+        },
+        {
+          "name": "Risk",
+          "description": "Potential adverse event with probability and impact",
+          "fields": ["id", "description", "probability", "impact", "category", "mitigation", "owner", "status"],
+          "risk_categories": ["Technical", "Security", "Operational", "Business", "Market", "Regulatory", "Financial"],
+          "status_values": ["Identified", "Assessed", "Mitigating", "Accepted", "Occurred", "Resolved"],
+          "lifecycle": ["Identified", "Scored", "Mitigated", "Monitored", "Resolved"]
+        },
+        {
+          "name": "Evidence",
+          "description": "Supporting data for decisions and validations",
+          "fields": ["id", "type", "source", "content", "confidence", "timestamp", "related_to"],
+          "evidence_types": ["Document", "Test Result", "Simulation Output", "Expert Review", "Market Data", "User Feedback"],
+          "lifecycle": ["Collected", "Validated", "Used", "Archived"]
+        },
+        {
+          "name": "Gate",
+          "description": "Control point that authorizes progression",
+          "fields": ["id", "name", "criteria", "evidence_required", "decision_authority", "status", "decision_record"],
+          "gate_types": ["Requirements Gate", "Architecture Gate", "Security Gate", "Quality Gate", "Deployment Gate", "Human Approval Gate"],
+          "decision_authorities": ["Automated", "Human-Approval", "Multi-Signature", "Risk-Based-Routing"],
+          "status_values": ["Pending", "Passed", "Failed", "Bypassed-With-Justification"],
+          "lifecycle": ["Defined", "Evaluated", "Decided", "Recorded"]
+        },
+        {
+          "name": "Task",
+          "description": "Atomic unit of executable work",
+          "fields": ["id", "name", "description", "capability", "parameters", "dependencies", "expected_duration", "assigned_agent", "status"],
+          "status_values": ["Planned", "Ready", "Executing", "Verifying", "Completed", "Failed", "Blocked", "Cancelled"],
+          "lifecycle": ["Created", "Scheduled", "Executing", "Verified", "Completed"]
+        },
+        {
+          "name": "Plan",
+          "description": "Structured sequence of tasks achieving objectives",
+          "fields": ["id", "version", "parent_plan_id", "intent_reference", "goals", "constraints", "tasks", "dependencies", "gates", "completion_conditions"],
+          "lifecycle": ["Draft", "Validated", "Executing", "Completed", "Replanned", "Abandoned"]
+        },
+        {
+          "name": "Outcome",
+          "description": "Result of executed plan or decision",
+          "fields": ["id", "plan_id", "actual_result", "predicted_result", "variance", "lessons", "timestamp"],
+          "lifecycle": ["Predicted", "Actual", "Analyzed", "Stored"]
+        },
+        {
+          "name": "Lesson",
+          "description": "Extracted learning from outcomes for future decisions",
+          "fields": ["id", "outcome_id", "description", "category", "applicability", "confidence"],
+          "lesson_categories": ["Cost Estimation", "Architecture Choice", "Risk Assessment", "Timeline Estimation", "Quality Issue"],
+          "lifecycle": ["Extracted", "Validated", "Applied", "Superseded"]
+        },
+        {
+          "name": "DecisionRecord",
+          "description": "Immutable record of a decision with full context",
+          "fields": ["id", "decision_type", "context", "options_considered", "chosen_option", "rationale", "evidence", "policy_results", "risk_assessment", "timestamp", "decision_maker"],
+          "lifecycle": ["Created", "Recorded", "Referenced", "Superseded"]
+        }
+      ]
+    },
+    "contracts": {
+      "versioned_contracts": {
+        "Idea.v1": {
+          "schema": {
+            "id": "string (UUID)",
+            "text": "string",
+            "source": "string",
+            "timestamp": "ISO8601 datetime",
+            "confidence": "float [0.0, 1.0]",
+            "metadata": "object"
+          },
+          "validation_rules": [
+            "text must not be empty",
+            "confidence must be between 0 and 1",
+            "timestamp must be valid ISO8601"
+          ]
+        },
+        "Intent.v1": {
+          "schema": {
+            "id": "string (UUID)",
+            "statement": "string",
+            "goals": ["Goal.v1"],
+            "constraints": ["Constraint.v1"],
+            "stakeholders": ["string"],
+            "evidence": ["Evidence.v1"],
+            "version": "string",
+            "parent_intent_id": "string (optional)",
+            "created_timestamp": "ISO8601 datetime"
+          },
+          "validation_rules": [
+            "at least 1 goal required",
+            "statement must not be empty",
+            "all referenced evidence must exist"
+          ]
+        },
+        "Goal.v1": {
+          "schema": {
+            "id": "string (UUID)",
+            "description": "string",
+            "success_criteria": ["string"],
+            "priority": "enum [Low, Medium, High, Critical]",
+            "owner": "string",
+            "measurable": "boolean"
+          }
+        },
+        "Constraint.v1": {
+          "schema": {
+            "id": "string (UUID)",
+            "expression": "string",
+            "type": "enum [Functional, Non-Functional, Regulatory, Security, Cost, Technical, Business, Operational]",
+            "severity": "enum [Low, Medium, High, Critical]",
+            "source": "string",
+            "evidence": ["Evidence.v1"],
+            "status": "enum [Discovered, Validated, Enforced, Relaxed]"
+          }
+        },
+        "Domain.v1": {
+          "schema": {
+            "id": "string (UUID)",
+            "name": "string",
+            "bounded_contexts": ["BoundedContext.v1"],
+            "entities": ["Entity.v1"],
+            "capabilities": ["Capability.v1"],
+            "relationships": ["object"]
+          }
+        },
+        "Requirement.v1": {
+          "schema": {
+            "id": "string (UUID)",
+            "description": "string",
+            "type": "enum [Functional, Non-Functional, Technical, Business, Security, Performance]",
+            "acceptance_criteria": ["AcceptanceCriterion.v1"],
+            "priority": "enum [Low, Medium, High, Critical]",
+            "status": "enum [Proposed, Approved, Implemented, Verified, Rejected]",
+            "derived_from": ["string (UUID references)"],
+            "constraints": ["Constraint.v1"]
+          }
+        },
+        "AcceptanceCriterion.v1": {
+          "schema": {
+            "id": "string (UUID)",
+            "requirement_id": "string (UUID)",
+            "statement": "string",
+            "test_contract": "object",
+            "verification_method": "enum [Automated Test, Manual Review, Simulation, Audit]"
+          }
+        },
+        "ArchitectureDecision.v1": {
+          "schema": {
+            "id": "string (UUID)",
+            "title": "string",
+            "context": "string",
+            "decision": "string",
+            "alternatives_considered": ["string"],
+            "rationale": "string",
+            "consequences": ["string"],
+            "status": "enum [Proposed, Accepted, Superseded, Deprecated]",
+            "evidence": ["Evidence.v1"],
+            "timestamp": "ISO8601 datetime"
+          }
+        },
+        "Risk.v1": {
+          "schema": {
+            "id": "string (UUID)",
+            "description": "string",
+            "probability": "float [0.0, 1.0]",
+            "impact": "float [0.0, 1.0]",
+            "risk_score": "float (computed: probability × impact)",
+            "category": "enum [Technical, Security, Operational, Business, Market, Regulatory, Financial]",
+            "mitigation": ["string"],
+            "owner": "string",
+            "status": "enum [Identified, Assessed, Mitigating, Accepted, Occurred, Resolved]"
+          }
+        },
+        "Evidence.v1": {
+          "schema": {
+            "id": "string (UUID)",
+            "type": "enum [Document, Test Result, Simulation Output, Expert Review, Market Data, User Feedback]",
+            "source": "string",
+            "content": "object",
+            "confidence": "float [0.0, 1.0]",
+            "timestamp": "ISO8601 datetime",
+            "related_to": ["string (UUID references)"]
+          }
+        },
+        "Gate.v1": {
+          "schema": {
+            "id": "string (UUID)",
+            "name": "string",
+            "criteria": ["string"],
+            "evidence_required": ["string"],
+            "decision_authority": "enum [Automated, Human-Approval, Multi-Signature, Risk-Based-Routing]",
+            "status": "enum [Pending, Passed, Failed, Bypassed-With-Justification]",
+            "decision_record": "DecisionRecord.v1"
+          }
+        },
+        "Task.v1": {
+          "schema": {
+            "id": "string (UUID)",
+            "name": "string",
+            "description": "string",
+            "capability": "string",
+            "parameters": "object",
+            "expected_duration": "integer (seconds, optional)",
+            "assigned_agent": "string",
+            "status": "enum [Planned, Ready, Executing, Verifying, Completed, Failed, Blocked, Cancelled]",
+            "dependencies": ["string (task IDs)"],
+            "artifacts": ["Artifact.v1"],
+            "retry_policy": "RetryPolicy.v1 (optional)"
+          }
+        },
+        "ExecutionPlan.v1": {
+          "schema": {
+            "id": "string (UUID)",
+            "version": "string (semantic version)",
+            "parent_plan_id": "string (UUID, optional)",
+            "intent_reference": "string (UUID)",
+            "goals": ["Goal.v1"],
+            "constraints": ["Constraint.v1"],
+            "required_capabilities": ["string"],
+            "inputs": ["object"],
+            "tasks": ["Task.v1"],
+            "dependencies": ["Dependency.v1"],
+            "artifacts": ["Artifact.v1"],
+            "gates": ["Gate.v1"],
+            "completion_conditions": ["string"],
+            "retry_policy": "RetryPolicy.v1 (optional)",
+            "provenance": "Provenance.v1",
+            "creation_timestamp": "ISO8601 datetime",
+            "replan_reason": "string (optional)"
+          },
+          "validation_rules": [
+            "all task dependencies must reference existing task IDs",
+            "all gates must have at least one criterion",
+            "required_capabilities must be registered in Capability Registry",
+            "provenance must be non-null",
+            "version must be valid semantic version",
+            "if parent_plan_id is set, replan_reason must be provided"
+          ],
+          "boundary_contract": "This contract is the explicit interface between Kernel and Execution Layer. Execution Layer must be able to consume this without knowing Kernel internals."
+        },
+        "DecisionRecord.v1": {
+          "schema": {
+            "id": "string (UUID)",
+            "decision_type": "enum [Architecture, Requirements, Risk, Gate, Replan, Policy]",
+            "context": "object",
+            "options_considered": ["object"],
+            "chosen_option": "object",
+            "rationale": "string",
+            "evidence": ["Evidence.v1"],
+            "policy_results": ["object"],
+            "risk_assessment": "Risk.v1",
+            "timestamp": "ISO8601 datetime",
+            "decision_maker": "string"
+          }
+        },
+        "Outcome.v1": {
+          "schema": {
+            "id": "string (UUID)",
+            "plan_id": "string (UUID)",
+            "actual_result": "object",
+            "predicted_result": "object",
+            "variance": "object",
+            "lessons": ["Lesson.v1"],
+            "timestamp": "ISO8601 datetime"
+          }
+        }
+      },
+      "supporting_contracts": {
+        "Dependency.v1": {
+          "schema": {
+            "dependent_task_id": "string (UUID)",
+            "dependency_task_id": "string (UUID)",
+            "dependency_type": "enum [Sequential, Parallel, Conditional, Data-Flow]"
+          }
+        },
+        "Artifact.v1": {
+          "schema": {
+            "id": "string (UUID)",
+            "name": "string",
+            "type": "string",
+            "location": "string",
+            "produced_by": "string (task ID)",
+            "consumed_by": ["string (task IDs)"],
+            "checksum": "string"
+          }
+        },
+        "RetryPolicy.v1": {
+          "schema": {
+            "max_retries": "integer",
+            "backoff_strategy": "enum [Fixed, Exponential, Linear]",
+            "initial_delay_seconds": "integer",
+            "max_delay_seconds": "integer",
+            "retryable_errors": ["string"]
+          }
+        },
+        "Provenance.v1": {
+          "schema": {
+            "origin": "string",
+            "derived_from": ["string (UUID references)"],
+            "transformations": ["object"],
+            "confidence": "float [0.0, 1.0]",
+            "audit_trail": ["object"]
+          }
+        }
+      }
+    },
+    "capabilities": {
+      "core_capabilities": [
+        {
+          "name": "Intent Engine",
+          "layer": "L2_INTENT_MODELING",
+          "responsibility": "Transform raw ideas into structured Intent models",
+          "sub_components": [
+            "Intent Extraction",
+            "Intent Refinement",
+            "Goal Modeling",
+            "Constraint Discovery",
+            "Ambiguity Resolution"
+          ],
+          "inputs": ["Idea.v1"],
+          "outputs": ["Intent.v1"],
+          "deterministic_parts": ["Schema validation", "Constraint format checking"],
+          "llm_backed_parts": ["Semantic extraction", "Goal inference", "Ambiguity resolution"],
+          "invariants": [
+            "Output must conform to Intent.v1 schema",
+            "All goals must be measurable",
+            "Constraints must be typed and severity-tagged"
+          ]
+        },
+        {
+          "name": "Domain Engine",
+          "layer": "L2_INTENT_MODELING",
+          "responsibility": "Decompose intent into domain models with bounded contexts",
+          "sub_components": [
+            "Domain Decomposition",
+            "Bounded Context Discovery",
+            "Entity Modeling",
+            "Capability Modeling"
+          ],
+          "inputs": ["Intent.v1"],
+          "outputs": ["Domain.v1"],
+          "deterministic_parts": ["Entity relationship validation", "Bounded context boundary checks"],
+          "llm_backed_parts": ["Domain decomposition", "Entity identification"],
+          "invariants": [
+            "Every entity must belong to exactly one bounded context",
+            "No cyclic dependencies between bounded contexts",
+            "All capabilities must be associated with at least one entity"
+          ]
+        },
+        {
+          "name": "Requirements Engine",
+          "layer": "L2_INTENT_MODELING",
+          "responsibility": "Derive structured requirements from domain models",
+          "sub_components": [
+            "Functional Requirements Elicitation",
+            "Non-Functional Requirements Analysis",
+            "Constraint Derivation",
+            "Acceptance Criteria Generation"
+          ],
+          "inputs": ["Domain.v1", "Intent.v1"],
+          "outputs": ["Requirement.v1"],
+          "deterministic_parts": ["Requirement ID generation", "Status tracking", "Acceptance criteria schema validation"],
+          "llm_backed_parts": ["Requirement elicitation", "Acceptance criteria drafting"],
+          "invariants": [
+            "Every requirement must trace to at least one intent goal",
+            "Every requirement must have at least one acceptance criterion",
+            "Non-functional requirements must include measurable thresholds"
+          ]
+        },
+        {
+          "name": "Context & Environment Engine",
+          "layer": "L2_INTENT_MODELING",
+          "responsibility": "Incorporate external signals into decision-making",
+          "sub_components": [
+            "Market Signal Analysis",
+            "Competitor Intelligence",
+            "Regulatory Monitoring",
+            "Technology Trend Analysis",
+            "User/Operational Feedback Processing"
+          ],
+          "inputs": ["External APIs", "Market Data Feeds", "Regulatory Databases"],
+          "outputs": ["Context Evidence", "Environmental Constraints"],
+          "deterministic_parts": ["Signal format validation", "Source verification"],
+          "llm_backed_parts": ["Signal interpretation", "Trend synthesis"],
+          "invariants": [
+            "All external signals must have source attribution",
+            "Regulatory constraints must be flagged as Critical severity",
+            "Market data must include confidence scores"
+          ]
+        },
+        {
+          "name": "Product Compiler (PRD)",
+          "layer": "L3_SYNTHESIS_SPECIFICATION",
+          "responsibility": "Compile canonical model into Product Requirements Document",
+          "sub_components": [
+            "Product Narrative Generation",
+            "User Story Compilation",
+            "Feature Prioritization",
+            "Roadmap Extraction"
+          ],
+          "inputs": ["Intent.v1", "Domain.v1", "Requirement.v1"],
+          "outputs": ["PRD Document"],
+          "deterministic_parts": ["Section templating", "Table generation", "Cross-reference linking"],
+          "llm_backed_parts": ["Narrative writing", "User story drafting"],
+          "invariants": [
+            "PRD must reference source requirements by ID",
+            "All prioritized features must trace to validated requirements",
+            "PRD version must match canonical model version"
+          ]
+        },
+        {
+          "name": "Architecture Compiler (ARD)",
+          "layer": "L3_SYNTHESIS_SPECIFICATION",
+          "responsibility": "Compile canonical model into Architecture Requirements Document",
+          "sub_components": [
+            "Component Identification",
+            "Service Boundary Definition",
+            "API Specification Generation",
+            "Data Model Derivation",
+            "Architecture Decision Recording"
+          ],
+          "inputs": ["Domain.v1", "Requirement.v1", "Constraint.v1"],
+          "outputs": ["ARD Document", "ArchitectureDecision.v1"],
+          "deterministic_parts": ["Component dependency graph", "API schema generation", "Data model derivation"],
+          "llm_backed_parts": ["Architecture rationale", "Trade-off analysis"],
+          "invariants": [
+            "Every capability must map to at least one component",
+            "All non-functional requirements must have corresponding architectural mechanisms",
+            "Architecture decisions must be recorded as ArchitectureDecision.v1"
+          ]
+        },
+        {
+          "name": "Validation Engine",
+          "layer": "L4_VERIFICATION_GOVERNANCE",
+          "responsibility": "Verify specifications against contracts, schemas, and invariants",
+          "sub_components": [
+            "Schema Validation",
+            "Contract Validation",
+            "Invariant Checking",
+            "Consistency Verification"
+          ],
+          "inputs": ["Any versioned contract"],
+          "outputs": ["ValidationResult (pass/fail with violations)"],
+          "deterministic_parts": ["All validation is deterministic"],
+          "llm_backed_parts": ["None - pure deterministic validation"],
+          "invariants": [
+            "Invalid contracts must be rejected with specific violation details",
+            "Validation must be idempotent",
+            "All violations must be traceable to specific rules"
+          ]
+        },
+        {
+          "name": "Simulation & Verification Engine",
+          "layer": "L4_VERIFICATION_GOVERNANCE",
+          "responsibility": "Simulate and verify system behavior before execution",
+          "sub_components": [
+            "What-if Analysis",
+            "Failure-mode Analysis",
+            "Performance Simulation",
+            "Cost Simulation",
+            "Security Analysis",
+            "Acceptance Verification"
+          ],
+          "inputs": ["ArchitectureDecision.v1", "Requirement.v1", "Plan.v1"],
+          "outputs": ["SimulationResult", "VerificationReport"],
+          "deterministic_parts": ["Simulation framework", "Result aggregation"],
+          "llm_backed_parts": ["Failure scenario generation", "Interpretation of complex results"],
+          "invariants": [
+            "Simulations must be reproducible with same inputs",
+            "All simulation assumptions must be recorded",
+            "High-risk simulations must trigger additional verification"
+          ],
+          "activation_policy": "Activated based on risk level, not before every gate"
+        },
+        {
+          "name": "Risk Engine",
+          "layer": "L4_VERIFICATION_GOVERNANCE",
+          "responsibility": "Identify, score, and track risks throughout the lifecycle",
+          "sub_components": [
+            "Risk Identification",
+            "Risk Scoring",
+            "Mitigation Planning",
+            "Risk Monitoring"
+          ],
+          "inputs": ["All canonical entities", "External signals"],
+          "outputs": ["Risk.v1", "Mitigation Recommendations"],
+          "deterministic_parts": ["Risk score calculation", "Category classification"],
+          "llm_backed_parts": ["Risk identification", "Mitigation strategy generation"],
+          "invariants": [
+            "Risk score = probability × impact",
+            "Critical risks must always have mitigation plans",
+            "All risks must have assigned owners"
+          ]
+        },
+        {
+          "name": "Decision Gateway",
+          "layer": "L4_VERIFICATION_GOVERNANCE",
+          "responsibility": "Authorize progression through gates based on evidence and policies",
+          "sub_components": [
+            "Evidence Collection",
+            "Policy Evaluation",
+            "Risk Assessment",
+            "Validation Result Aggregation",
+            "Simulation Result Analysis",
+            "Human Approval Routing",
+            "Decision Record Creation"
+          ],
+          "inputs": ["Gate.v1", "Evidence.v1", "Policy results", "Risk.v1", "Validation results", "Simulation results"],
+          "outputs": ["DecisionRecord.v1", "Gate status update"],
+          "deterministic_parts": ["Policy evaluation", "Risk aggregation", "Decision routing"],
+          "llm_backed_parts": ["Complex trade-off analysis", "Justification drafting"],
+          "invariants": [
+            "Every gate decision must produce a DecisionRecord.v1",
+            "Bypassed gates must have documented justification",
+            "Critical-risk decisions must require human approval"
+          ]
+        },
+        {
+          "name": "Decision Memory",
+          "layer": "L5_MEMORY_KNOWLEDGE",
+          "responsibility": "Persist decisions, rationale, and outcomes for future reference",
+          "sub_components": [
+            "Decision Recording",
+            "Rationale Indexing",
+            "Prediction Tracking",
+            "Outcome Comparison"
+          ],
+          "inputs": ["DecisionRecord.v1", "Outcome.v1"],
+          "outputs": ["Indexed decision history", "Feedback data"],
+          "deterministic_parts": ["Storage", "Indexing", "Retrieval"],
+          "llm_backed_parts": ["Lesson extraction from outcomes"],
+          "invariants": [
+            "All decisions must be immutable once recorded",
+            "Outcomes must be linked to original predictions",
+            "Feedback loop must be event-driven, not autonomous"
+          ]
+        },
+        {
+          "name": "Execution Planning Engine",
+          "layer": "L6_PLANNING",
+          "responsibility": "Transform validated specifications into executable plans",
+          "sub_components": [
+            "Task Decomposition",
+            "Dependency Graph Construction",
+            "Resource Allocation",
+            "Agent Assignment",
+            "Gate Assignment",
+            "ExecutionPlan.v1 Generation"
+          ],
+          "inputs": ["Validated canonical model", "Capability Registry", "Resource availability"],
+          "outputs": ["ExecutionPlan.v1"],
+          "deterministic_parts": ["Dependency graph construction", "Plan versioning", "Schema validation"],
+          "llm_backed_parts": ["Task decomposition heuristics", "Agent assignment suggestions"],
+          "invariants": [
+            "All dependencies must be acyclic",
+            "Every task must have an assigned capability",
+            "All required capabilities must be in Capability Registry",
+            "Plan must include all required gates"
+          ]
+        },
+        {
+          "name": "Dynamic Planner",
+          "layer": "L6_PLANNING",
+          "responsibility": "Replan in response to events, failures, and new evidence",
+          "sub_components": [
+            "Event-Triggered Replanning",
+            "Constraint-Aware Replanning",
+            "Failure Recovery",
+            "Plan Versioning"
+          ],
+          "inputs": ["Execution events", "New evidence", "Constraint changes", "Task failures"],
+          "outputs": ["New ExecutionPlan.v1 with incremented version", "Replan reason"],
+          "deterministic_parts": ["Version incrementing", "Event routing"],
+          "llm_backed_parts": ["Replanning strategy", "Alternative path generation"],
+          "invariants": [
+            "Every replan must create a new plan version",
+            "Replan reason must be recorded in provenance",
+            "Replanning must respect original intent and critical constraints",
+            "Replanning cannot bypass required gates"
+          ]
+        }
+      ],
+      "capability_registry": {
+        "purpose": "Runtime-discoverable registry of all capabilities available to the Kernel",
+        "interface": {
+          "register_capability": "(capability: Capability.v1) -> Result",
+          "lookup_capability": "(name: string) -> Option<Capability.v1>",
+          "list_capabilities": "(filter: Filter) -> Vec<Capability.v1>",
+          "resolve_dependencies": "(required: Vec<string>) -> Result<ResolutionGraph>"
+        },
+        "invariants": [
+          "No duplicate capability names",
+          "All registered capabilities must have valid schemas",
+          "Capability removal requires deprecation period"
+        ]
+      },
+      "extension_api": {
+        "purpose": "Allow new capabilities to be added without Core Kernel modification",
+        "interface": {
+          "register_extension": "(extension: Extension) -> Result",
+          "unregister_extension": "(id: string) -> Result",
+          "invoke_extension": "(id: string, input: object) -> Result<object>",
+          "list_extensions": "() -> Vec<Extension>"
+        },
+        "invariants": [
+          "Extensions cannot directly mutate canonical state",
+          "All extension calls must be recorded in provenance",
+          "Extensions must respect governance policies"
+        ]
+      }
+    },
+    "governance": {
+      "governance_kernel": {
+        "purpose": "Centralized enforcement of constraints, policies, rules, and invariants",
+        "components": [
+          {
+            "type": "Constraints",
+            "description": "Hard limitations that must never be violated",
+            "enforcement": "Deterministic pre-flight checks",
+            "examples": [
+              "Budget constraints",
+              "Regulatory requirements",
+              "Security policies",
+              "Technical limitations"
+            ]
+          },
+          {
+            "type": "Policies",
+            "description": "Decision rules that guide system behavior",
+            "enforcement": "Policy engine evaluation at decision points",
+            "examples": [
+              "IF task.cost > $10 THEN require approval",
+              "IF confidence < 0.7 THEN use strong reasoning model",
+              "IF production deployment THEN require human gate",
+              "IF risk_score > 0.7 THEN require simulation"
+            ]
+          },
+          {
+            "type": "Rules",
+            "description": "Operational rules for specific scenarios",
+            "enforcement": "Rule engine at relevant checkpoints",
+            "examples": [
+              "Retry policy for failed tasks",
+              "Timeout rules for external calls",
+              "Rate limiting rules"
+            ]
+          },
+          {
+            "type": "Invariants",
+            "description": "Properties that must always hold true",
+            "enforcement": "Automated invariant testing",
+            "examples": [
+              "No cyclic dependencies in task graphs",
+              "All decisions have provenance",
+              "Canonical state cannot be corrupted by extensions",
+              "Plan versions are monotonically increasing"
+            ]
+          }
+        ]
+      },
+      "critical_invariants": [
+        {
+          "id": "INV-001",
+          "statement": "Engine cannot mutate canonical state directly",
+          "verification": "Architecture test + runtime enforcement",
+          "category": "Architectural"
+        },
+        {
+          "id": "INV-002",
+          "statement": "Every state transition has an event",
+          "verification": "Event log audit",
+          "category": "State Management"
+        },
+        {
+          "id": "INV-003",
+          "statement": "Every decision has provenance",
+          "verification": "Provenance completeness check",
+          "category": "Audit"
+        },
+        {
+          "id": "INV-004",
+          "statement": "Every ExecutionPlan is schema-valid",
+          "verification": "Schema validation before emission",
+          "category": "Contract"
+        },
+        {
+          "id": "INV-005",
+          "statement": "Execution cannot bypass required Gate",
+          "verification": "Gate sequence validation",
+          "category": "Governance"
+        },
+        {
+          "id": "INV-006",
+          "statement": "Every capability is independently replaceable",
+          "verification": "Integration test with capability swap",
+          "category": "Extensibility"
+        },
+        {
+          "id": "INV-007",
+          "statement": "Every external operation is idempotent",
+          "verification": "Idempotency tests",
+          "category": "Reliability"
+        },
+        {
+          "id": "INV-008",
+          "statement": "Every plan has a version",
+          "verification": "Plan schema validation",
+          "category": "Versioning"
+        },
+        {
+          "id": "INV-009",
+          "statement": "Every replan creates a new plan version",
+          "verification": "Version increment test",
+          "category": "Versioning"
+        },
+        {
+          "id": "INV-010",
+          "statement": "Kernel failure cannot corrupt execution state",
+          "verification": "Failure injection tests",
+          "category": "Reliability"
+        },
+        {
+          "id": "INV-011",
+          "statement": "Invalid contracts are rejected",
+          "verification": "Contract validation tests",
+          "category": "Contract"
+        },
+        {
+          "id": "INV-012",
+          "statement": "Invalid state transitions are rejected",
+          "verification": "State machine tests",
+          "category": "State Management"
+        },
+        {
+          "id": "INV-013",
+          "statement": "Capabilities cannot corrupt canonical state",
+          "verification": "Isolation tests",
+          "category": "Security"
+        },
+        {
+          "id": "INV-014",
+          "statement": "ExecutionPlan.v1 validates independently",
+          "verification": "Independent validation test",
+          "category": "Contract"
+        },
+        {
+          "id": "INV-015",
+          "statement": "Kernel does not require Restate internals",
+          "verification": "Dependency analysis + integration test",
+          "category": "Architecture"
+        }
+      ],
+      "gates": {
+        "standard_gates": [
+          {
+            "name": "Requirements Gate",
+            "position": "After Requirements Engine",
+            "required_evidence": ["Validated requirements", "Acceptance criteria", "Traceability"],
+            "decision_authority": "Automated + Human Review for Critical",
+            "blocking": true
+          },
+          {
+            "name": "Architecture Gate",
+            "position": "After Architecture Compiler",
+            "required_evidence": ["Validated ARD", "Architecture decisions", "NFR coverage"],
+            "decision_authority": "Risk-Based Routing",
+            "blocking": true
+          },
+          {
+            "name": "Validation Gate",
+            "position": "After Validation Engine",
+            "required_evidence": ["Schema validation", "Invariant checks", "Consistency verification"],
+            "decision_authority": "Automated",
+            "blocking": true
+          },
+          {
+            "name": "Simulation Gate",
+            "position": "After Simulation Engine (conditional)",
+            "required_evidence": ["Simulation results", "Risk assessment"],
+            "decision_authority": "Automated for Low Risk, Human for High Risk",
+            "blocking": false,
+            "activation_condition": "Risk score > threshold"
+          },
+          {
+            "name": "Security Gate",
+            "position": "Before execution",
+            "required_evidence": ["Security analysis", "Vulnerability scan"],
+            "decision_authority": "Automated + Human for Critical",
+            "blocking": true
+          },
+          {
+            "name": "Deployment Gate",
+            "position": "Before production deployment",
+            "required_evidence": ["All previous gates passed", "Human approval"],
+            "decision_authority": "Human Approval Required",
+            "blocking": true
+          }
+        ]
+      }
+    },
+    "runtime_boundaries": {
+      "xstate_boundary": {
+        "purpose": "State machine semantics for task and plan lifecycles",
+        "role": "State/Transition Logic",
+        "integration": "Kernel emits state machine contracts; XState runtime executes them",
+        "kernel_responsibility": "Define states, transitions, guards",
+        "xstate_responsibility": "Execute state machine, emit events",
+        "invariants": [
+          "Kernel does not import XState library directly",
+          "State transitions are validated by Kernel before emission",
+          "XState events are recorded in provenance"
+        ]
+      },
+      "restate_boundary": {
+        "purpose": "Durable execution of workflows and tasks",
+        "role": "Durable Execution Runtime",
+        "integration": "Kernel emits ExecutionPlan.v1; Restate executes it durably",
+        "kernel_responsibility": "Generate valid ExecutionPlan.v1",
+        "restate_responsibility": "Execute plan with retry, timeout, recovery, persistence",
+        "invariants": [
+          "Kernel does not import Restate SDK directly",
+          "Restate is responsible for workflow state, not domain state",
+          "Restate execution failures are reported back as events",
+          "Restate cannot modify canonical Kernel state"
+        ]
+      },
+      "llm_boundary": {
+        "purpose": "Provider-neutral LLM abstraction",
+        "role": "Reasoning Provider",
+        "integration": "Kernel calls LLM adapter; adapter routes to providers",
+        "kernel_responsibility": "Define reasoning requests with context",
+        "adapter_responsibility": "Route to providers, handle failures, aggregate responses",
+        "invariants": [
+          "Kernel never references specific LLM provider APIs",
+          "All LLM calls are recorded in provenance",
+          "LLM outputs are validated before acceptance",
+          "LLM is never the source of system truth"
+        ]
+      },
+      "mcp_boundary": {
+        "purpose": "Tool and agent integration via Model Context Protocol",
+        "role": "Tool/Agent Integration",
+        "integration": "Kernel defines tool contracts; MCP adapter executes them",
+        "kernel_responsibility": "Define tool schemas and invocation contracts",
+        "mcp_responsibility": "Execute tools, manage sessions, handle errors",
+        "invariants": [
+          "All tool calls are idempotent where possible",
+          "Tool failures are recorded and trigger replanning",
+          "Tool outputs are validated against schemas"
+        ]
+      }
+    },
+    "execution": {
+      "execution_flow": {
+        "phases": [
+          "Plan Generation (Kernel)",
+          "Plan Emission (ExecutionPlan.v1)",
+          "Plan Submission (to Restate)",
+          "Task Scheduling (Restate)",
+          "Task Execution (Agents/Tools)",
+          "Result Collection",
+          "Gate Evaluation",
+          "Replan (if needed)",
+          "Completion"
+        ],
+        "feedback_loops": [
+          "Task failure -> Replan",
+          "New evidence -> Replan",
+          "Constraint change -> Replan",
+          "Gate failure -> Refinement",
+          "Simulation failure -> Architecture review"
+        ]
+      },
+      "dynamic_replanning": {
+        "triggers": [
+          "Task failed",
+          "New evidence received",
+          "Constraint changed",
+          "Environment changed",
+          "Resource unavailable",
+          "Human decision",
+          "Risk threshold exceeded"
+        ],
+        "replan_process": [
+          "Capture trigger event",
+          "Assess impact on current plan",
+          "Generate alternative paths",
+          "Validate new plan against invariants",
+          "Increment plan version",
+          "Record replan reason in provenance",
+          "Emit new ExecutionPlan.v1",
+          "Notify Restate of replan"
+        ]
+      }
+    },
+    "quality": {
+      "quality_gates": {
+        "build_quality": [
+          "cargo fmt --all -- --check: PASS",
+          "cargo check --workspace: PASS",
+          "cargo test --workspace: PASS",
+          "cargo clippy --workspace --all-targets --all-features -- -D warnings: PASS"
+        ],
+        "contract_quality": [
+          "All contracts have JSON Schema",
+          "All contracts are versioned",
+          "All contracts have validation rules",
+          "All contracts have example instances"
+        ],
+        "test_quality": [
+          "Unit tests for every component",
+          "Contract tests for every versioned contract",
+          "Integration tests for capability interactions",
+          "Invariant tests for critical invariants",
+          "Failure injection tests",
+          "End-to-end tests for full pipeline"
+        ],
+        "security_quality": [
+          "No secrets in tracked files",
+          "No credentials in repository",
+          ".gitignore properly configured",
+          "No build artifacts tracked"
+        ]
+      },
+      "testing_strategy": {
+        "test_categories": [
+          {
+            "type": "Unit Tests",
+            "scope": "Individual functions and methods",
+            "coverage_target": "All public APIs"
+          },
+          {
+            "type": "Contract Tests",
+            "scope": "Versioned contracts",
+            "coverage_target": "Schema validation, serialization, deserialization"
+          },
+          {
+            "type": "Integration Tests",
+            "scope": "Capability interactions",
+            "coverage_target": "All major integration paths"
+          },
+          {
+            "type": "Invariant Tests",
+            "scope": "Critical invariants",
+            "coverage_target": "All 15 critical invariants"
+          },
+          {
+            "type": "Property-Based Tests",
+            "scope": "Randomized inputs",
+            "coverage_target": "Edge cases and boundary conditions"
+          },
+          {
+            "type": "Failure Injection Tests",
+            "scope": "Error paths",
+            "coverage_target": "All failure modes"
+          },
+          {
+            "type": "End-to-End Tests",
+            "scope": "Full pipeline",
+            "coverage_target": "Idea to Execution to Outcome"
+          }
+        ],
+        "minimum_test_count": 100,
+        "critical_invariant_tests": "All 15 critical invariants must have dedicated tests"
+      }
+    },
+    "deployment": {
+      "deployment_model": "GitHub-first, ephemeral local workspace",
+      "canonical_source": "GitHub repository",
+      "local_workspace": "Disposable, used only for Git operations and build",
+      "ci_cd": {
+        "required_checks": [
+          "cargo fmt",
+          "cargo check",
+          "cargo test",
+          "cargo clippy",
+          "invariant tests",
+          "contract tests",
+          "security scan"
+        ],
+        "branch_protection": "All checks must pass before merge to main",
+        "deployment_gates": [
+          "All CI checks pass",
+          "Human approval for production",
+          "Rollback plan documented"
+        ]
+      }
+    },
+    "extensibility": {
+      "extension_points": [
+        {
+          "point": "New Capability",
+          "method": "Implement Capability trait and register in Capability Registry",
+          "core_impact": "None - Core Kernel unchanged"
+        },
+        {
+          "point": "New LLM Provider",
+          "method": "Implement LLM adapter trait and register",
+          "core_impact": "None - Kernel uses abstraction"
+        },
+        {
+          "point": "New Tool",
+          "method": "Implement MCP tool contract",
+          "core_impact": "None - Kernel uses abstraction"
+        },
+        {
+          "point": "New Gate Type",
+          "method": "Define gate contract and register",
+          "core_impact": "None - Gate Engine is extensible"
+        },
+        {
+          "point": "New Policy",
+          "method": "Define policy and register in Governance Kernel",
+          "core_impact": "None - Policy Engine is extensible"
+        }
+      ],
+      "anti_patterns": [
+        "Modifying Core Kernel to add capability",
+        "Direct coupling to specific LLM providers",
+        "Hard-coded tool implementations",
+        "Bypassing Capability Registry",
+        "Mutating canonical state from extensions"
+      ]
+    },
+    "dependencies": {
+      "internal_dependencies": {
+        "dependency_graph": {
+          "L1_CORE_KERNEL": [],
+          "L2_INTENT_MODELING": ["L1_CORE_KERNEL"],
+          "L3_SYNTHESIS_SPECIFICATION": ["L1_CORE_KERNEL", "L2_INTENT_MODELING"],
+          "L4_VERIFICATION_GOVERNANCE": ["L1_CORE_KERNEL", "L2_INTENT_MODELING", "L3_SYNTHESIS_SPECIFICATION"],
+          "L5_MEMORY_KNOWLEDGE": ["L1_CORE_KERNEL"],
+          "L6_PLANNING": ["L1_CORE_KERNEL", "L2_INTENT_MODELING", "L3_SYNTHESIS_SPECIFICATION", "L4_VERIFICATION_GOVERNANCE"],
+          "L7_RUNTIME": ["L1_CORE_KERNEL", "L6_PLANNING"],
+          "L8_INTEGRATION_ADAPTERS": ["L1_CORE_KERNEL"],
+          "L9_OBSERVABILITY": ["L1_CORE_KERNEL"]
+        }
+      },
+      "external_dependencies": {
+        "runtime": ["Restate", "XState"],
+        "llm_providers": ["OpenAI", "Anthropic", "Gemini", "DeepSeek", "OpenRouter"],
+        "tools": ["MCP-compatible tools"],
+        "storage": ["PostgreSQL (primary)", "Graph DB (projection, optional)", "Vector DB (projection, optional)"],
+        "messaging": ["Event bus (optional, not required for v1)"],
+        "observability": ["Tracing", "Metrics", "Logging"]
+      },
+      "rust_dependencies": {
+        "core": ["serde", "serde_json", "uuid", "chrono", "thiserror", "tokio"],
+        "optional": ["tracing", "tracing-subscriber", "async-trait"],
+        "testing": ["tokio-test", "proptest", "mockall"]
+      }
+    },
+    "status": {
+      "specification_status": "FINAL",
+      "implementation_status": "IN_PROGRESS",
+      "production_readiness": "NOT_YET_PROVEN",
+      "next_milestones": [
+        "Complete all partial implementations",
+        "Achieve minimum 100 tests",
+        "Verify all 15 critical invariants",
+        "Establish GitHub as canonical source",
+        "Verify real Restate integration",
+        "Verify real XState integration",
+        "Verify real LLM provider integration",
+        "Verify real MCP tool integration",
+        "Complete end-to-end tests",
+        "Deploy to production with monitoring"
+      ]
+    }
+  }
+}
