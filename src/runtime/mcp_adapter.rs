@@ -1,5 +1,6 @@
 //! MCP Adapter - integrates with Model Control Protocol for tool execution
 
+use crate::contracts::{ExecutionPlanV1, PlanValidationError};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -10,6 +11,8 @@ pub struct MCPAdapter {
     tools: HashMap<String, ToolDefinition>,
     /// MCP configuration
     config: MCPConfig,
+    /// Whether to validate plans before executing tasks
+    validate_plans: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -18,6 +21,13 @@ pub struct MCPConfig {
     pub api_key: Option<String>,
     pub timeout_seconds: u64,
     pub max_retries: u32,
+    /// Whether to validate execution plans before task execution
+    #[serde(default = "default_validate_plans")]
+    pub validate_plans: bool,
+}
+
+fn default_validate_plans() -> bool {
+    true
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -70,8 +80,61 @@ impl MCPAdapter {
     pub fn new(config: MCPConfig) -> Self {
         Self {
             tools: HashMap::new(),
+            validate_plans: config.validate_plans,
             config,
         }
+    }
+
+    /// Create a new MCP adapter with default configuration
+    pub fn with_defaults() -> Self {
+        Self::new(MCPConfig {
+            endpoint_url: "http://localhost:8000".to_string(),
+            api_key: None,
+            timeout_seconds: 30,
+            max_retries: 3,
+            validate_plans: true,
+        })
+    }
+
+    /// Execute tasks from an execution plan with validation
+    pub async fn execute_plan_tasks(
+        &self,
+        plan: &ExecutionPlanV1,
+    ) -> Result<Vec<ToolResponse>, MCPError> {
+        // Validate the plan before executing tasks if validation is enabled
+        if self.validate_plans {
+            plan.validate().map_err(|e| MCPError::ValidationError(e.0))?;
+        }
+
+        let mut responses = Vec::new();
+        
+        // Execute each task in the plan
+        for task in &plan.tasks {
+            // Create a tool call for each task based on its capability
+            let tool_call = ToolCall {
+                tool_name: task.capability.clone(),
+                arguments: task.parameters.clone().into_iter().collect(),
+                execution_id: task.id.clone(),
+            };
+            
+            // Execute the tool and collect the response
+            match self.execute_tool(tool_call).await {
+                Ok(response) => responses.push(response),
+                Err(e) => {
+                    // Handle edge case: missing or disabled tool
+                    // Create an error response instead of failing the entire plan
+                    responses.push(ToolResponse {
+                        execution_id: task.id.clone(),
+                        success: false,
+                        result: None,
+                        error: Some(format!("Task execution failed: {}", e)),
+                        execution_time_ms: 0,
+                    });
+                }
+            }
+        }
+        
+        Ok(responses)
     }
 
     /// Register a tool
@@ -198,6 +261,8 @@ pub enum MCPError {
     AuthError(String),
     #[error("Tool execution failed: {0}")]
     ExecutionFailed(String),
+    #[error("Plan validation failed: {0}")]
+    ValidationError(String),
 }
 
 impl Default for MCPAdapter {
