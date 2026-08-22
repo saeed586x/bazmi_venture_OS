@@ -13,6 +13,7 @@
 //! - Parse execution ID and status only from validated response fields
 
 use crate::contracts::ExecutionPlanV1;
+use crate::contracts::execution_plan_v1::{Dependency, Task};
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
@@ -75,7 +76,7 @@ impl RestateAdapter {
         let response = self.send_submit_request(&request).await?;
 
         // Step 4: Parse and validate the response
-        self.parse_submit_response(response)
+        self.parse_submit_response(response).await
     }
 
     /// Validate an ExecutionPlan.v1 before submission

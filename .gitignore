@@ -1,28 +1,4 @@
 ```
-# Compiled and build artifacts
 target/
-*.o
-*.obj
-*.a
-*.lib
-*.so
-*.dylib
-*.dll
-
-# Dependencies
-Cargo.lock
-vendor/
-
-# Logs and temp files
-*.log
-*.tmp
-*.swp
-
-# Editors
-.vscode/
-.idea/
-
-# OS generated files
-.DS_Store
-Thumbs.db
+**/*.rs.bk
 ```
