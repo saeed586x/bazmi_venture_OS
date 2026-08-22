@@ -2,4 +2,4 @@
 
 pub mod execution_plan_v1;
 
-pub use execution_plan_v1::ExecutionPlanV1;
+pub use execution_plan_v1::{ExecutionPlanV1, PlanValidationError};

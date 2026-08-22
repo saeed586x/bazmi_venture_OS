@@ -134,8 +134,8 @@ fn test_complete_e2e_workflow() {
     println!("E2E workflow completed successfully!");
 }
 
-#[test]
-fn test_llm_adapter_basic_functionality() {
+#[tokio::test]
+async fn test_llm_adapter_basic_functionality() {
     use venture_os_kernel::runtime::llm_adapter::{LLMAdapter, LLMConfig, LLMProvider};
 
     let config = LLMConfig {
@@ -143,16 +143,16 @@ fn test_llm_adapter_basic_functionality() {
         model: "gpt-3.5-turbo".to_string(),
         api_key: None,
         temperature: 0.7,
+        base_url: None,
     };
 
     let llm_adapter = LLMAdapter::new(config);
-    let response = futures::executor::block_on(llm_adapter.generate_text("Hello world"));
+    let response = llm_adapter.generate_text("Hello world").await;
 
-    assert!(response.is_ok());
-    let text = response.unwrap();
-    assert!(text.contains("LLM response to:"));
-
-    println!("LLM adapter basic test passed");
+    // Without API key, we expect network error (not mock success)
+    assert!(response.is_err());
+    let err = response.unwrap_err();
+    println!("LLM adapter correctly fails without API key: {:?}", err);
 }
 
 #[test]

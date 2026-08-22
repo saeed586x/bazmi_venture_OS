@@ -7,6 +7,8 @@ use serde::{Deserialize, Serialize};
 pub struct LLMAdapter {
     /// Configuration for the LLM adapter
     config: LLMConfig,
+    #[serde(skip)]
+    http_client: reqwest::Client,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -15,6 +17,7 @@ pub struct LLMConfig {
     pub model: String,
     pub api_key: Option<String>,
     pub temperature: f32,
+    pub base_url: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -28,36 +31,147 @@ pub enum LLMProvider {
 impl LLMAdapter {
     /// Create a new LLM adapter
     pub fn new(config: LLMConfig) -> Self {
-        Self { config }
+        Self {
+            config,
+            http_client: reqwest::Client::new(),
+        }
+    }
+
+    /// Get the API endpoint URL based on provider
+    fn get_api_url(&self) -> String {
+        if let Some(custom_url) = &self.config.base_url {
+            return custom_url.clone();
+        }
+
+        match self.config.provider {
+            LLMProvider::OpenAI => "https://api.openai.com/v1/chat/completions".to_string(),
+            LLMProvider::Anthropic => "https://api.anthropic.com/v1/messages".to_string(),
+            LLMProvider::Google => {
+                "https://generativelanguage.googleapis.com/v1beta/models".to_string()
+            }
+            LLMProvider::Custom(_) => "http://localhost:8000/v1/chat/completions".to_string(),
+        }
+    }
+
+    /// Build request body based on provider
+    fn build_request_body(&self, prompt: &str) -> Result<serde_json::Value, LLMError> {
+        match self.config.provider {
+            LLMProvider::OpenAI | LLMProvider::Custom(_) => Ok(serde_json::json!({
+                "model": self.config.model,
+                "messages": [{
+                    "role": "user",
+                    "content": prompt
+                }],
+                "temperature": self.config.temperature
+            })),
+            LLMProvider::Anthropic => Ok(serde_json::json!({
+                "model": self.config.model,
+                "max_tokens": 4096,
+                "messages": [{
+                    "role": "user",
+                    "content": prompt
+                }]
+            })),
+            LLMProvider::Google => Ok(serde_json::json!({
+                "contents": [{
+                    "parts": [{
+                        "text": prompt
+                    }]
+                }],
+                "generationConfig": {
+                    "temperature": self.config.temperature
+                }
+            })),
+        }
+    }
+
+    /// Parse response based on provider
+    fn parse_response(&self, response: serde_json::Value) -> Result<String, LLMError> {
+        match self.config.provider {
+            LLMProvider::OpenAI | LLMProvider::Custom(_) => response
+                .pointer("/choices/0/message/content")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string())
+                .ok_or_else(|| LLMError::ApiError("Invalid response format".to_string())),
+            LLMProvider::Anthropic => response
+                .pointer("/content/0/text")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string())
+                .ok_or_else(|| LLMError::ApiError("Invalid response format".to_string())),
+            LLMProvider::Google => response
+                .pointer("/candidates/0/content/parts/0/text")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string())
+                .ok_or_else(|| LLMError::ApiError("Invalid response format".to_string())),
+        }
     }
 
     /// Generate text using the LLM
     pub async fn generate_text(&self, prompt: &str) -> Result<String, LLMError> {
-        // In a real implementation, this would:
-        // 1. Call the LLM provider API
-        // 2. Return the generated text
+        let api_url = self.get_api_url();
+        let request_body = self.build_request_body(prompt)?;
 
-        // For now, return a placeholder response
-        Ok(format!("LLM response to: {}", prompt))
+        let mut request = self
+            .http_client
+            .post(&api_url)
+            .header("Content-Type", "application/json");
+
+        // Add provider-specific headers
+        if let Some(api_key) = &self.config.api_key {
+            match self.config.provider {
+                LLMProvider::OpenAI | LLMProvider::Custom(_) => {
+                    request = request.header("Authorization", format!("Bearer {}", api_key));
+                }
+                LLMProvider::Anthropic => {
+                    request = request
+                        .header("x-api-key", api_key)
+                        .header("anthropic-version", "2023-06-01");
+                }
+                LLMProvider::Google => {
+                    // Google uses query parameter for API key
+                }
+            }
+        }
+
+        let response = request
+            .json(&request_body)
+            .send()
+            .await
+            .map_err(|e| LLMError::ApiError(format!("HTTP request failed: {}", e)))?;
+
+        if !response.status().is_success() {
+            let status = response.status();
+            let error_text = response.text().await.unwrap_or_default();
+            return Err(LLMError::ApiError(format!(
+                "API request failed with status {}: {}",
+                status, error_text
+            )));
+        }
+
+        let response_json: serde_json::Value = response
+            .json()
+            .await
+            .map_err(|e| LLMError::ApiError(format!("JSON parse failed: {}", e)))?;
+        self.parse_response(response_json)
     }
 
     /// Process structured data with the LLM
     pub async fn process_structured<T>(
         &self,
         data: &T,
-        _instruction: &str,
+        instruction: &str,
     ) -> Result<ProcessedData, LLMError>
     where
         T: serde::Serialize,
     {
-        // In a real implementation, this would:
-        // 1. Serialize the data
-        // 2. Send it to the LLM with instructions
-        // 3. Parse the structured response
+        let data_json = serde_json::to_string(data).map_err(LLMError::SerializationError)?;
+        let prompt = format!("{}\n\nData:\n{}", instruction, data_json);
+
+        let content = self.generate_text(&prompt).await?;
 
         Ok(ProcessedData {
-            original_size: serde_json::to_string(data).map(|s| s.len()).unwrap_or(0),
-            processed_content: "Processed by LLM".to_string(),
+            original_size: data_json.len(),
+            processed_content: content,
             confidence: 0.9,
         })
     }
