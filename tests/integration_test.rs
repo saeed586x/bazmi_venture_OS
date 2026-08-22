@@ -1,9 +1,9 @@
 //! Integration tests for the Venture OS Kernel
 
-use venture_os_kernel::Kernel;
 use venture_os_kernel::contracts::ExecutionPlanV1;
 use venture_os_kernel::core::governance::Governance;
 use venture_os_kernel::core::semantic_model::SemanticModel;
+use venture_os_kernel::Kernel;
 
 // Import capabilities directly from their modules
 use venture_os_kernel::capabilities::ard_compiler::ARDCompiler;
