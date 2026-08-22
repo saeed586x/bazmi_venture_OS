@@ -107,20 +107,21 @@ impl ParsedCondition {
     pub fn parse(condition: &str) -> Option<Self> {
         // Try each operator in order of length (longest first to avoid partial matches)
         let operators = ["starts_with", "contains", "ends_with", "!=", "=="];
-        
+
         for op_str in operators {
             if let Some(pos) = condition.find(op_str) {
                 let field = condition[..pos].trim();
                 let value = condition[pos + op_str.len()..].trim();
-                
-                if let Some(operator) = Operator::from_str(op_str) {
-                    if !field.is_empty() && !value.is_empty() {
-                        return Some(ParsedCondition {
-                            field: field.to_string(),
-                            operator,
-                            value: value.to_string(),
-                        });
-                    }
+
+                if let Some(operator) = Operator::from_str(op_str)
+                    && !field.is_empty()
+                    && !value.is_empty()
+                {
+                    return Some(ParsedCondition {
+                        field: field.to_string(),
+                        operator,
+                        value: value.to_string(),
+                    });
                 }
             }
         }
@@ -130,9 +131,9 @@ impl ParsedCondition {
     /// Evaluate the condition against a set of field values
     /// Returns None if the field is not found in context
     pub fn evaluate(&self, context: &std::collections::HashMap<String, String>) -> Option<bool> {
-        context.get(&self.field).map(|field_value| {
-            self.operator.evaluate(field_value, &self.value)
-        })
+        context
+            .get(&self.field)
+            .map(|field_value| self.operator.evaluate(field_value, &self.value))
     }
 }
 
@@ -155,14 +156,21 @@ impl Governance {
     /// Evaluate a single rule against the provided context
     /// Returns the raw condition result (before rule type interpretation)
     /// Returns None if the condition cannot be parsed or field not found
-    fn evaluate_condition(&self, rule: &Rule, context: &std::collections::HashMap<String, String>) -> Option<bool> {
+    fn evaluate_condition(
+        &self,
+        rule: &Rule,
+        context: &std::collections::HashMap<String, String>,
+    ) -> Option<bool> {
         let parsed = ParsedCondition::parse(&rule.condition)?;
         parsed.evaluate(context)
     }
 
     /// Validate an action against governance policies
     /// The context map contains field-value pairs to check against policy rules
-    pub fn validate(&self, context: &std::collections::HashMap<String, String>) -> ValidationResult {
+    pub fn validate(
+        &self,
+        context: &std::collections::HashMap<String, String>,
+    ) -> ValidationResult {
         let mut violations = Vec::new();
 
         for policy in &self.policies {
@@ -177,10 +185,10 @@ impl Governance {
                         // For Compliance rules: condition must be true (false = violation)
                         // For Forbidden rules: condition being true triggers violation (true = violation)
                         let is_violation = match rule.rule_type {
-                            RuleType::Compliance => !condition_true,  // violation if condition is false
-                            RuleType::Forbidden => condition_true,    // violation if condition is true
+                            RuleType::Compliance => !condition_true, // violation if condition is false
+                            RuleType::Forbidden => condition_true, // violation if condition is true
                         };
-                        
+
                         if is_violation {
                             let message = match rule.rule_type {
                                 RuleType::Compliance => format!(
@@ -220,7 +228,10 @@ impl Governance {
 
     /// Validate an execution plan against governance policies
     /// This applies the same semantics as validate() but accepts a plan-specific context
-    pub fn validate_plan(&self, plan_context: &std::collections::HashMap<String, String>) -> ValidationResult {
+    pub fn validate_plan(
+        &self,
+        plan_context: &std::collections::HashMap<String, String>,
+    ) -> ValidationResult {
         self.validate(plan_context)
     }
 }
@@ -251,7 +262,10 @@ mod tests {
     use std::collections::HashMap;
 
     fn create_test_context(fields: Vec<(&str, &str)>) -> HashMap<String, String> {
-        fields.into_iter().map(|(k, v)| (k.to_string(), v.to_string())).collect()
+        fields
+            .into_iter()
+            .map(|(k, v)| (k.to_string(), v.to_string()))
+            .collect()
     }
 
     // ===== Operator Tests =====
@@ -522,7 +536,7 @@ mod tests {
     #[test]
     fn test_multiple_policies_aggregate_violations() {
         let mut gov = Governance::new();
-        
+
         // Policy 1
         gov.add_policy(Policy {
             id: "policy-1".to_string(),
@@ -554,10 +568,7 @@ mod tests {
         });
 
         // Both conditions fail
-        let context = create_test_context(vec![
-            ("priority", "low"),
-            ("security", "basic"),
-        ]);
+        let context = create_test_context(vec![("priority", "low"), ("security", "basic")]);
         let result = gov.validate(&context);
         assert!(!result.compliant);
         assert_eq!(result.violations.len(), 2);
@@ -643,10 +654,10 @@ mod tests {
         gov.add_policy(policy);
 
         let context = create_test_context(vec![("value", "other")]);
-        
+
         // Run multiple times to ensure determinism
         let results: Vec<_> = (0..5).map(|_| gov.validate(&context)).collect();
-        
+
         // All results should be identical
         for i in 1..results.len() {
             assert_eq!(results[i].compliant, results[0].compliant);
@@ -673,19 +684,22 @@ mod tests {
         gov.add_policy(policy);
 
         let context = create_test_context(vec![("plan_type", "unapproved")]);
-        
+
         let validate_result = gov.validate(&context);
         let validate_plan_result = gov.validate_plan(&context);
-        
+
         // Both should produce same results
         assert_eq!(validate_result.compliant, validate_plan_result.compliant);
-        assert_eq!(validate_result.violations.len(), validate_plan_result.violations.len());
+        assert_eq!(
+            validate_result.violations.len(),
+            validate_plan_result.violations.len()
+        );
     }
 
     #[test]
     fn test_all_operators_comprehensive() {
         let mut gov = Governance::new();
-        
+
         // Create policies for each operator
         let operators = vec![
             ("starts_with", "prefix-test", "prefix", true),

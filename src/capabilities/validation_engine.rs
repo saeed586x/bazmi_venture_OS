@@ -117,10 +117,8 @@ impl ValidationEngine {
         let mut governance_context = std::collections::HashMap::new();
         governance_context.insert("plan_id".to_string(), plan.id.clone());
         governance_context.insert("plan_version".to_string(), plan.version.clone());
-        
-        let governance_validation = self
-            .governance
-            .validate(&governance_context);
+
+        let governance_validation = self.governance.validate(&governance_context);
         if !governance_validation.compliant {
             for violation in governance_validation.violations {
                 violations.push(ValidationViolation {

@@ -13,7 +13,6 @@
 //! - Parse execution ID and status only from validated response fields
 
 use crate::contracts::ExecutionPlanV1;
-use crate::contracts::execution_plan_v1::{Dependency, Task};
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
@@ -50,7 +49,9 @@ impl RestateAdapter {
         let client = reqwest::Client::builder()
             .timeout(timeout)
             .build()
-            .map_err(|e| RestateError::NetworkError(format!("Failed to create HTTP client: {}", e)))?;
+            .map_err(|e| {
+                RestateError::NetworkError(format!("Failed to create HTTP client: {}", e))
+            })?;
 
         Ok(Self { config, client })
     }
@@ -89,11 +90,15 @@ impl RestateAdapter {
         }
 
         if plan.version.trim().is_empty() {
-            return Err(RestateError::InvalidPlan("Plan version is empty".to_string()));
+            return Err(RestateError::InvalidPlan(
+                "Plan version is empty".to_string(),
+            ));
         }
 
         if plan.intent_reference.trim().is_empty() {
-            return Err(RestateError::InvalidPlan("Intent reference is empty".to_string()));
+            return Err(RestateError::InvalidPlan(
+                "Intent reference is empty".to_string(),
+            ));
         }
 
         // Validate semantic version format (basic check)
@@ -149,7 +154,7 @@ impl RestateAdapter {
         // Build adjacency list
         let mut graph: HashMap<&String, Vec<&String>> = HashMap::new();
         for task in &plan.tasks {
-            graph.entry(&task.id).or_insert_with(Vec::new);
+            graph.entry(&task.id).or_default();
         }
 
         for dep in &plan.dependencies {
@@ -191,10 +196,8 @@ impl RestateAdapter {
         }
 
         for task_id in graph.keys() {
-            if !visited.contains(task_id) {
-                if dfs(task_id, &graph, &mut visited, &mut rec_stack) {
-                    return true;
-                }
+            if !visited.contains(task_id) && dfs(task_id, &graph, &mut visited, &mut rec_stack) {
+                return true;
             }
         }
 
@@ -241,19 +244,15 @@ impl RestateAdapter {
             RestateError::SerializationError(format!("Failed to serialize request: {}", e))
         })?;
 
-        let response = req_builder
-            .json(&request_body)
-            .send()
-            .await
-            .map_err(|e| {
-                if e.is_timeout() {
-                    RestateError::Timeout(e.to_string())
-                } else if e.is_connect() {
-                    RestateError::NetworkError(format!("Connection failed: {}", e))
-                } else {
-                    RestateError::NetworkError(e.to_string())
-                }
-            })?;
+        let response = req_builder.json(&request_body).send().await.map_err(|e| {
+            if e.is_timeout() {
+                RestateError::Timeout(e.to_string())
+            } else if e.is_connect() {
+                RestateError::NetworkError(format!("Connection failed: {}", e))
+            } else {
+                RestateError::NetworkError(e.to_string())
+            }
+        })?;
 
         Ok(response)
     }
