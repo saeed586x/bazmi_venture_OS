@@ -391,6 +391,7 @@ struct RestateSubmitResponse {
 
 /// Response format from Restate status lookup
 #[derive(Debug, Clone, Deserialize)]
+#[allow(dead_code)]
 struct RestateStatusResponse {
     execution_id: String,
     status: String,
@@ -577,7 +578,7 @@ mod tests {
 
     #[test]
     fn test_config_default_timeout() {
-        let config = RestateConfig {
+        let _config = RestateConfig {
             endpoint_url: "http://localhost:8080".to_string(),
             api_key: None,
             timeout_seconds: 0, // Will use default

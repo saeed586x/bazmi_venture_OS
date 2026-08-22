@@ -1,6 +1,5 @@
-```
+```rust
 # Compiled and build artifacts
-target/
 *.o
 *.obj
 *.exe
@@ -8,15 +7,24 @@ target/
 *.so
 *.a
 *.out
+target/
 
 # Dependencies
-Cargo.lock
-vendor/
+**/node_modules/
+**/venv/
+**/.venv/
+**/__pycache__/
+**/.mypy_cache/
+**/.pytest_cache/
+**/.gradle/
+**/dist/
+**/build/
 
 # Logs and temp files
 *.log
 *.tmp
 *.swp
+*.swo
 
 # Environment
 .env
@@ -26,14 +34,37 @@ vendor/
 # Editors
 .vscode/
 .idea/
-*.swp
-*.swo
+
+# System files
+.DS_Store
+Thumbs.db
 
 # Coverage
 coverage/
 htmlcov/
 .coverage
 
-# Rust-specific
-**/*.rs.bk
+# Compressed files
+*.zip
+*.gz
+*.tar
+*.tgz
+*.bz2
+*.xz
+*.7z
+*.rar
+*.zst
+*.lz4
+*.lzh
+*.cab
+*.arj
+*.rpm
+*.deb
+*.Z
+*.lz
+*.lzo
+*.tar.gz
+*.tar.bz2
+*.tar.xz
+*.tar.zst
 ```

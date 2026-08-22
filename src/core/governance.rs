@@ -580,7 +580,7 @@ mod tests {
                 },
                 Rule {
                     id: "rule-2".to_string(),
-                    condition: "priority != high".to_string(),
+                    condition: "priority == high".to_string(),
                     action: "action2".to_string(),
                     severity: Severity::Critical,
                     rule_type: RuleType::Compliance,
@@ -590,7 +590,7 @@ mod tests {
         };
         gov.add_policy(policy);
 
-        // Set priority to "medium" which fails both rules
+        // Set priority to "medium" which fails both rules (not low and not high)
         let context = create_test_context(vec![("priority", "medium")]);
         let result = gov.validate(&context);
         assert!(!result.compliant);
@@ -695,7 +695,7 @@ mod tests {
             ("!=", "different", "other", true),
         ];
 
-        for (i, (op, field_val, rule_val, _)) in operators.iter().enumerate() {
+        for (i, (op, _field_val, rule_val, _)) in operators.iter().enumerate() {
             gov.add_policy(Policy {
                 id: format!("policy-{}", i),
                 name: format!("{} Policy", op),
@@ -711,31 +711,6 @@ mod tests {
             });
         }
 
-        // Test matching values
-        let match_context = create_test_context(vec![
-            ("field", "prefix-test"),
-            ("field", "middle-value"),
-            ("field", "test-suffix"),
-            ("field", "exact"),
-            ("field", "different"),
-        ]);
-        // Verify that all operators can be parsed correctly
-        for (i, (op, _, rule_val, _)) in operators.iter().enumerate() {
-            gov.add_policy(Policy {
-                id: format!("test-policy-{}", i),
-                name: format!("Test {} Policy", op),
-                description: format!("Test {}", op),
-                rules: vec![Rule {
-                    id: format!("test-rule-{}", i),
-                    condition: format!("field {} {}", op, rule_val),
-                    action: "test".to_string(),
-                    severity: Severity::Low,
-                    rule_type: RuleType::Compliance,
-                }],
-                enabled: true,
-            });
-        }
-        
         // Just verify we have policies for all operators
         assert_eq!(gov.policies().len(), 5);
     }
