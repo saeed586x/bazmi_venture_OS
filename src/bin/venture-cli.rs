@@ -12,10 +12,10 @@ fn main() {
 
     let idea = &args[1];
     println!("Processing idea: {}", idea);
-    
+
     // Initialize kernel and process the intent
     let kernel = Kernel::new();
-    
+
     // Process through kernel to generate execution plan
     match kernel.process_intent(idea) {
         Ok(plan) => {

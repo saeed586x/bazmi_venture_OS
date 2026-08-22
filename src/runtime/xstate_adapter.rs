@@ -1,7 +1,7 @@
 //! XState adapter for state machine visualization
 
-use crate::contracts::ExecutionPlanV1;
 use crate::contracts::execution_plan_v1::{Gate, Task};
+use crate::contracts::ExecutionPlanV1;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
