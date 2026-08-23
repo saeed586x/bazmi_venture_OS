@@ -25,6 +25,13 @@ impl Kernel {
 
     /// Process an intent and generate an execution plan
     pub fn process_intent(&self, intent: &str) -> Result<ExecutionPlanV1, KernelError> {
+        // Validate intent is not empty or whitespace-only
+        if intent.trim().is_empty() {
+            return Err(KernelError::InvalidIntent(
+                "Intent cannot be empty or whitespace-only".to_string(),
+            ));
+        }
+
         // Deterministic plan generation based on intent analysis
         // This ensures contract compliance without requiring real LLM calls
 
@@ -36,25 +43,45 @@ impl Kernel {
         // Generate deterministic IDs based on intent hash
         let intent_hash = Self::hash_intent(intent);
 
-        // Build goals (minimum 1 required)
-        let goals = vec![crate::contracts::Goal {
-            id: format!("goal-{:x}-1", intent_hash),
-            description: format!("Successfully {} {} system", action_keyword, domain_keyword),
-            priority: 1,
-        }];
+        // Build goals (exactly 3 required per contract)
+        let goals = vec![
+            crate::contracts::Goal {
+                id: format!("goal-{:x}-1", intent_hash),
+                description: format!("Successfully {} {} system", action_keyword, domain_keyword),
+                priority: 1,
+            },
+            crate::contracts::Goal {
+                id: format!("goal-{:x}-2", intent_hash),
+                description: format!("Ensure {} meets quality standards", domain_keyword),
+                priority: 2,
+            },
+            crate::contracts::Goal {
+                id: format!("goal-{:x}-3", intent_hash),
+                description: format!("Deliver {} solution on time", domain_keyword),
+                priority: 3,
+            },
+        ];
 
-        // Build constraints (at least 1 for completeness)
-        let constraints = vec![crate::contracts::Constraint {
-            id: format!("constraint-{:x}-1", intent_hash),
-            description: format!("Must comply with {} domain standards", domain_keyword),
-            constraint_type: crate::contracts::ConstraintType::Compliance,
-        }];
+        // Build constraints (exactly 2 required per contract)
+        let constraints = vec![
+            crate::contracts::Constraint {
+                id: format!("constraint-{:x}-1", intent_hash),
+                description: format!("Must comply with {} domain standards", domain_keyword),
+                constraint_type: crate::contracts::ConstraintType::Compliance,
+            },
+            crate::contracts::Constraint {
+                id: format!("constraint-{:x}-2", intent_hash),
+                description: format!("Must follow security best practices for {}", domain_keyword),
+                constraint_type: crate::contracts::ConstraintType::Custom("Security".to_string()),
+            },
+        ];
 
-        // Build required capabilities (minimum 1 required)
+        // Build required capabilities (exactly 4 required per contract)
         let required_capabilities = vec![
             "planning".to_string(),
             "execution".to_string(),
             "validation".to_string(),
+            "monitoring".to_string(),
         ];
 
         // Build inputs
@@ -65,7 +92,7 @@ impl Kernel {
             default_value: Some(serde_json::Value::String(intent.to_string())),
         }];
 
-        // Build tasks (minimum 3 required per contract)
+        // Build tasks (exactly 4 required per contract)
         let mut tasks = Vec::new();
         tasks.push(crate::contracts::Task {
             id: format!("task-{:x}-1", intent_hash),
@@ -118,8 +145,25 @@ impl Kernel {
             .collect(),
             expected_duration: Some(300),
         });
+        tasks.push(crate::contracts::Task {
+            id: format!("task-{:x}-4", intent_hash),
+            name: format!("Validate {} implementation", domain_keyword),
+            description: format!(
+                "Validate and test the {} {} solution",
+                action_keyword, domain_keyword
+            ),
+            capability: "validation".to_string(),
+            parameters: [(
+                "solution".to_string(),
+                serde_json::Value::String(format!("{} {}", action_keyword, domain_keyword)),
+            )]
+            .iter()
+            .cloned()
+            .collect(),
+            expected_duration: Some(180),
+        });
 
-        // Build dependencies (minimum 1 required)
+        // Build dependencies (at least 1 required, forming acyclic DAG)
         let dependencies = vec![
             crate::contracts::Dependency {
                 dependent_task_id: format!("task-{:x}-2", intent_hash),
@@ -128,6 +172,10 @@ impl Kernel {
             crate::contracts::Dependency {
                 dependent_task_id: format!("task-{:x}-3", intent_hash),
                 dependency_task_id: format!("task-{:x}-2", intent_hash),
+            },
+            crate::contracts::Dependency {
+                dependent_task_id: format!("task-{:x}-4", intent_hash),
+                dependency_task_id: format!("task-{:x}-3", intent_hash),
             },
         ];
 
@@ -139,25 +187,57 @@ impl Kernel {
             location: format!("/artifacts/{}/requirements.md", domain_keyword),
         }];
 
-        // Build gates (minimum 1 required)
-        let gates = vec![crate::contracts::Gate {
-            id: format!("gate-{:x}-1", intent_hash),
-            name: "Quality Gate".to_string(),
-            description: format!("Ensure {} meets quality standards", domain_keyword),
-            gate_type: crate::contracts::GateType::Quality,
-            criteria: vec![crate::contracts::GateCriterion {
-                id: format!("criterion-{:x}-1", intent_hash),
-                description: "All tests pass".to_string(),
-                evaluation_method: "automated".to_string(),
-            }],
-        }];
+        // Build gates (exactly 2 required per contract)
+        let gates = vec![
+            crate::contracts::Gate {
+                id: format!("gate-{:x}-1", intent_hash),
+                name: "Quality Gate".to_string(),
+                description: format!("Ensure {} meets quality standards", domain_keyword),
+                gate_type: crate::contracts::GateType::Quality,
+                criteria: vec![
+                    crate::contracts::GateCriterion {
+                        id: format!("criterion-{:x}-1", intent_hash),
+                        description: "All tests pass".to_string(),
+                        evaluation_method: "automated".to_string(),
+                    },
+                    crate::contracts::GateCriterion {
+                        id: format!("criterion-{:x}-2", intent_hash),
+                        description: "Code review completed".to_string(),
+                        evaluation_method: "manual".to_string(),
+                    },
+                ],
+            },
+            crate::contracts::Gate {
+                id: format!("gate-{:x}-2", intent_hash),
+                name: "Security Gate".to_string(),
+                description: format!("Ensure {} meets security requirements", domain_keyword),
+                gate_type: crate::contracts::GateType::Security,
+                criteria: vec![crate::contracts::GateCriterion {
+                    id: format!("criterion-{:x}-3", intent_hash),
+                    description: "Security scan passed".to_string(),
+                    evaluation_method: "automated".to_string(),
+                }],
+            },
+        ];
 
-        // Build completion conditions (minimum 1 required)
-        let completion_conditions = vec![crate::contracts::CompletionCondition {
-            id: format!("completion-{:x}-1", intent_hash),
-            description: format!("{} system successfully delivered", domain_keyword),
-            expression: format!("all_tasks_complete AND quality_gate_passed"),
-        }];
+        // Build completion conditions (exactly 3 required per contract)
+        let completion_conditions = vec![
+            crate::contracts::CompletionCondition {
+                id: format!("completion-{:x}-1", intent_hash),
+                description: format!("{} system successfully delivered", domain_keyword),
+                expression: format!("all_tasks_complete AND quality_gate_passed"),
+            },
+            crate::contracts::CompletionCondition {
+                id: format!("completion-{:x}-2", intent_hash),
+                description: format!("{} documentation completed", domain_keyword),
+                expression: format!("documentation_reviewed AND approved"),
+            },
+            crate::contracts::CompletionCondition {
+                id: format!("completion-{:x}-3", intent_hash),
+                description: format!("{} stakeholder sign-off obtained", domain_keyword),
+                expression: format!("stakeholder_approval_received"),
+            },
+        ];
 
         Ok(ExecutionPlanV1 {
             id: Uuid::new_v4().to_string(),
