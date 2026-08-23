@@ -9,7 +9,17 @@ serde_json = "1.0"
 uuid = { version = "1.0", features = ["v4", "serde"] }
 thiserror = "1.0"
 chrono = { version = "0.4", features = ["serde"] }
+anyhow = "1.0"
+restate-sdk = { version = "0.2", optional = true }
 
 [dev-dependencies]
 futures = "0.3"
 tokio = { version = "1.0", features = ["full"] }
+
+[[bin]]
+name = "restate-workers"
+path = "src/bin/restate-workers.rs"
+required-features = ["restate"]
+
+[features]
+restate = ["dep:restate-sdk"]
